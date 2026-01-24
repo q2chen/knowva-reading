@@ -56,7 +56,7 @@ Knowva（ノヴァ）は、AIによる読書体験支援アプリケーション
 - **Agent Framework:** Agent Development Kit (ADK)
 - **LLM API:** Gemini / OpenAI GPT-4 / Anthropic Claude
 - **ストレージ:** Google Cloud Storage（生ログ）+ Firestore（構造化データ）
-- **フロントエンド:** React / Next.js / Vue.js（未確定）
+- **フロントエンド:** Next.js (App Router)
 - **バックエンド:** Python (FastAPI)
 - **インフラ:** Google Cloud Agent Engine
 
