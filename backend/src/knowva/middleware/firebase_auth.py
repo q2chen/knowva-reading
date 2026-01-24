@@ -15,10 +15,15 @@ def _get_firebase_app() -> firebase_admin.App:
     if _firebase_app is None:
         if settings.use_emulator:
             os.environ["FIREBASE_AUTH_EMULATOR_HOST"] = settings.firebase_auth_emulator_host
-        cred = credentials.ApplicationDefault() if not settings.use_emulator else None
-        _firebase_app = firebase_admin.initialize_app(
-            cred, options={"projectId": settings.google_cloud_project}
-        )
+            # Emulator環境では認証情報不要
+            _firebase_app = firebase_admin.initialize_app(
+                options={"projectId": settings.google_cloud_project}
+            )
+        else:
+            cred = credentials.ApplicationDefault()
+            _firebase_app = firebase_admin.initialize_app(
+                cred, options={"projectId": settings.google_cloud_project}
+            )
     return _firebase_app
 
 
@@ -32,7 +37,8 @@ async def get_current_user(
     _get_firebase_app()
     token = credentials.credentials
     try:
-        decoded = auth.verify_id_token(token)
+        decoded = auth.verify_id_token(token, check_revoked=False)
         return {"uid": decoded["uid"], "email": decoded.get("email")}
-    except Exception:
+    except Exception as e:
+        print(f"Auth error: {e}")  # Debug用
         raise HTTPException(status_code=401, detail="Invalid or expired token")

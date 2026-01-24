@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from knowva.config import settings
+from knowva.config import settings  # noqa: F401 (環境変数設定を含むため最初にimport)
 from knowva.routers import readings, sessions
 
 app = FastAPI(title="Knowva API", version="0.1.0")

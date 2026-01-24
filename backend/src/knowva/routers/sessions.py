@@ -108,7 +108,10 @@ async def send_message(
         new_message=user_content,
     ):
         if event.is_final_response() and event.content and event.content.parts:
-            response_text = event.content.parts[0].text
+            for part in event.content.parts:
+                if part.text:
+                    response_text = part.text
+                    break
 
     # AIの応答をFirestoreに保存
     ai_message = await firestore.save_message(

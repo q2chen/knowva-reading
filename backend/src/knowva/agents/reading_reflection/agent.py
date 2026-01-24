@@ -5,7 +5,7 @@ from knowva.agents.reading_reflection.tools import get_reading_context, save_ins
 
 reading_reflection_agent = LlmAgent(
     name="reading_reflection_agent",
-    model="gemini-2.0-flash",
+    model="gemini-3-flash-preview",
     instruction="""あなたは読書体験を深掘りする「聞き上手」なAIアシスタントです。
 ユーザーが読んだ本（または読んでいる最中の本）について対話し、
 以下の観点から読書体験を言語化する手助けをしてください：

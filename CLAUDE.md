@@ -10,7 +10,51 @@ Knowva（ノヴァ）は、AIによる読書体験支援アプリケーション
 
 ## プロジェクト状態
 
-設計・仕様策定フェーズ。ソースコードの実装はまだ行われていない。
+MVP実装済み。以下の機能が動作する：
+- Firebase Auth（メール/パスワード）によるユーザー認証
+- 読書記録のCRUD
+- 読書振り返りエージェントとの対話（ADK + Gemini）
+- 対話からのInsight抽出・保存
+- プロファイル表示（読み取り専用、静的）
+
+Phase 2の機能（GCS生ログ保存、プロファイル抽出エージェント、推薦エージェント、SSEストリーミング等）はコード内に`# TODO(phase2):` コメントで記録されている。
+
+## ローカル開発環境の起動
+
+### 前提条件
+- Node.js 18+
+- Python 3.11+
+- uv（Pythonパッケージマネージャ）
+- Firebase CLI (`npm install -g firebase-tools`)
+
+### 1. Firebase Emulator起動
+```bash
+firebase emulators:start
+```
+Auth(9099)、Firestore(8080)、Emulator UI(4000) が起動する。
+
+### 2. バックエンド起動
+```bash
+cd backend
+cp .env.example .env  # 初回のみ。GOOGLE_API_KEYを設定すること
+uv run uvicorn knowva.main:app --reload --port 8000
+```
+
+### 3. フロントエンド起動
+```bash
+cd frontend
+npm install  # 初回のみ
+npm run dev
+```
+
+http://localhost:3000 でアクセス可能。
+
+### 環境変数（backend/.env）
+- `GOOGLE_API_KEY` - Gemini APIキー（必須）
+- `GOOGLE_GENAI_USE_VERTEXAI=FALSE` - Vertex AIを使わない設定
+- `USE_EMULATOR=true` - エミュレータ使用フラグ
+- `FIRESTORE_EMULATOR_HOST=localhost:8080`
+- `FIREBASE_AUTH_EMULATOR_HOST=localhost:9099`
 
 ## ドキュメント構成
 
@@ -53,15 +97,58 @@ Knowva（ノヴァ）は、AIによる読書体験支援アプリケーション
 
 ## 技術スタック
 
-- **Agent Framework:** Agent Development Kit (ADK)
-- **LLM API:** Gemini / OpenAI GPT-4 / Anthropic Claude
-- **ストレージ:** Google Cloud Storage（生ログ）+ Firestore（構造化データ）
-- **フロントエンド:** Next.js (App Router)
-- **バックエンド:** Python (FastAPI)
-- **インフラ:** Google Cloud Agent Engine
+- **Agent Framework:** Agent Development Kit (ADK) + google-genai SDK
+- **LLM:** Gemini（現在 `gemini-3-flash-preview`）
+- **ストレージ:** Firestore（構造化データ）。GCS生ログ保存はPhase 2
+- **フロントエンド:** Next.js (App Router) + TypeScript + Tailwind CSS
+- **バックエンド:** Python (FastAPI) + uv
+- **認証:** Firebase Auth（メール/パスワード）
+- **インフラ（ローカル）:** Firebase Emulator Suite
 
 ## AIエージェント
 
-1. **読書振り返りエージェント** - 対話を通じて読書体験を深掘りし、感想・学びの言語化を支援
+### 実装済み（MVP）
+1. **読書振り返りエージェント** - 対話を通じて読書体験を深掘りし、感想・学びの言語化を支援。Insightの自動保存機能付き。
+
+### Phase 2
 2. **プロファイル抽出エージェント** - 対話ログからユーザーの属性・価値観・状況を抽出・更新
 3. **推薦エージェント** - ユーザープロファイルに基づき次に読むべき本を提案
+
+## プロジェクト構成
+
+```
+backend/
+├── src/knowva/
+│   ├── main.py              # FastAPIエントリポイント
+│   ├── config.py            # 設定・環境変数
+│   ├── dependencies.py      # Firestoreクライアント
+│   ├── middleware/
+│   │   └── firebase_auth.py # Firebase Auth認証
+│   ├── routers/
+│   │   ├── readings.py      # 読書記録CRUD API
+│   │   └── sessions.py      # 対話セッション・メッセージAPI
+│   ├── agents/
+│   │   └── reading_reflection/
+│   │       ├── agent.py     # ADK LlmAgent定義
+│   │       └── tools.py     # save_insight, get_reading_context
+│   └── services/
+│       └── firestore.py     # Firestore操作
+├── pyproject.toml
+└── .env.example
+
+frontend/
+├── src/
+│   ├── app/
+│   │   ├── (auth)/          # ログイン・登録
+│   │   └── (main)/          # 認証後ページ
+│   │       ├── home/        # 読書一覧
+│   │       ├── readings/[readingId]/  # 読書詳細・チャット
+│   │       └── profile/     # プロファイル表示
+│   ├── components/chat/     # ChatInterface
+│   ├── lib/                 # firebase, api, types
+│   └── providers/           # AuthProvider
+├── package.json
+└── next.config.ts
+
+firebase.json                # Emulator設定
+```
