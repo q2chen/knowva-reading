@@ -64,113 +64,133 @@ Knowvaは、将来的なAIモデルの進化やマルチモーダルなアート
 
 ## データ構造（MVP版）
 
-MVPでは、最小限のテーブル構造で開始します。複雑な機能は後のフェーズで追加します。
+MVPでは、Firestoreのドキュメント指向設計に基づいた構造で開始します。
 
-```mermaid
-erDiagram
-    USERS ||--o{ READINGS : "has"
-    USERS ||--o{ USER_PROFILES : "has"
-    BOOKS ||--o{ READINGS : "read by users"
-    READINGS ||--o{ CONVERSATIONS : "has"
-    READINGS ||--o{ INSIGHTS : "generates"
-    USER_PROFILES ||--o{ RECOMMENDATIONS : "receives"
-    BOOKS ||--o{ RECOMMENDATIONS : "recommended as"
+### Firestore設計の原則
 
-    USERS {
-        int user_id PK
-        string name
-        string email
-        datetime created_at
-    }
+Firestoreは**NoSQLドキュメントデータベース**であり、RDBとは異なる設計思想が必要です：
 
-    BOOKS {
-        int book_id PK
-        string title "書籍名"
-        string author "著者"
-        datetime created_at
-    }
+- **JOINは存在しない**: 関連データは非正規化して埋め込むか、サブコレクションで表現
+- **ID体系**: Firestoreが生成する`string`（UUID）を使用
+- **読み取り最適化**: 1回のクエリで必要なデータが取得できるよう設計
+- **書き込みコストとのトレードオフ**: データの重複は許容し、読み取りパフォーマンスを優先
 
-    READINGS {
-        int reading_id PK
-        int user_id FK
-        int book_id FK
-        date read_date "読了日"
-        datetime created_at
-    }
+### Firestoreコレクション構造
 
-    CONVERSATIONS {
-        int conversation_id PK
-        int reading_id FK
-        string role "user or assistant"
-        text message "対話内容"
-        datetime created_at
-    }
-
-    INSIGHTS {
-        int insight_id PK
-        int reading_id FK
-        text content "本から得た気づき・学び"
-        text favorite_points "好きだったポイント"
-        text key_takeaways "重要な学び"
-        datetime created_at
-    }
-
-    USER_PROFILES {
-        int profile_id PK
-        int user_id FK
-        json interests "興味・関心のタグやキーワード"
-        json reading_preferences "読書傾向（ジャンル、テーマなど）"
-        text summary "プロファイル要約"
-        datetime updated_at
-    }
-
-    RECOMMENDATIONS {
-        int recommendation_id PK
-        int user_id FK
-        int book_id FK
-        text reason "推薦理由"
-        boolean is_read "読んだかどうか"
-        datetime created_at
-    }
 ```
+/books/{bookId}                       // ルートコレクション: 書籍マスタ
+│   title, author, isbn?, createdAt, updatedAt
+
+/users/{userId}
+│   name, email, createdAt
+│   currentProfile: { ... }           // 現在のプロファイル（高速表示用）
+│
+├── /profileHistory/{historyId}       // プロファイル履歴（思想の変遷）
+│       profile: { ... }, changedAt, triggerReadingId?
+│
+├── /readings/{readingId}             // 読書記録
+│   │   bookId, book: { title, author }  // マスタ参照 + 非正規化
+│   │   readCount                     // この本の通算読書回数
+│   │   status: "reading" | "completed"
+│   │   startDate, completedDate?
+│   │   readingContext: { ... }       // 読書時の状況・きっかけ等
+│   │   latestSummary
+│   │
+│   ├── /insights/{insightId}         // 気づき・学び（複数）
+│   │       content, type, createdAt, sessionRef?
+│   │
+│   └── /sessions/{sessionId}         // 対話セッション
+│       │   sessionType: "during_reading" | "after_completion" | "reflection"
+│       │   startedAt, endedAt, summary, gcsLogPath
+│       │
+│       └── /messages/{messageId}     // 対話メッセージ
+│               role, message, inputType, createdAt
+│
+└── /recommendations/{recommendationId}  // おすすめ
+        bookId, book: { ... }, reason, profileFactors[], status, createdAt
+```
+
+※ 各フィールドの詳細な型定義は実装時に決定。上記は構造の概要を示す。
+
+### 設計のポイント
+
+| 項目 | RDB設計（旧） | Firestore設計（新） |
+|------|--------------|-------------------|
+| ID | `int` (auto increment) | `string` (UUID自動生成) |
+| 書籍情報 | 正規化 (`BOOKS`テーブル) | `/books` マスタ + 各`readings`に非正規化 |
+| ユーザープロファイル | 別テーブル (`USER_PROFILES`) | `users`に埋め込み + `/profileHistory`で履歴管理 |
+| 気づき・学び | 別テーブル (`INSIGHTS`) | `readings`のサブコレクション（複数追記可能） |
+| 対話履歴 | 別テーブル (`CONVERSATIONS`) | `sessions/messages`の2階層で管理 |
+| おすすめ | 別テーブル (`RECOMMENDATIONS`) | `users`のサブコレクション |
+
+### 非正規化の理由
+
+**書籍情報の重複保持について:**
+- `/books/{bookId}` でマスタ管理しつつ、各`readings`にも`book`を埋め込み
+- 読書一覧を1クエリで取得可能
+- `bookId`で同じ本の再読を追跡（`readCount`の算出）
+- 書籍情報の更新時は、Cloud Functionsで関連readingsを更新（またはスナップショットとして放置）
+
+**プロファイル履歴について:**
+- `currentProfile`: 現在のプロファイル（高速表示用）
+- `/profileHistory`: プロファイルの変遷を時系列で保存
+- 「過去の自分」との対話、思想の変化の可視化が可能
+- プロファイル更新時に自動でhistoryを追加
+
+**セッション構造について:**
+- 1つの読書記録（reading）に複数の対話セッション（sessions）
+- 「読書中」「読了後」「振り返り」など目的別にセッションを分離
+- 各セッションはGCSの生ログへの参照（`gcsLogPath`）を持つ
 
 ### Agentが聞き出す情報の保存方法
 
-MVPの対話でAgentが聞き出す情報は、以下の形で保存します：
-
-**保存先の考え方:**
+**保存先の方針:**
 - **生ログ層（Google Cloud Storage）**: 対話の完全な内容をJSON形式で永続保存
-- **解釈層（Firestore）**:
-  - `CONVERSATIONS.message`: 対話内容（テキスト）
-  - `USER_PROFILES.summary`: AIが抽出したプロファイルの要約（テキスト）
-  - `USER_PROFILES.interests`, `reading_preferences`: 構造化されたタグ（JSON）
+- **解釈層（Firestore）**: AIが構造化した情報を保存
 
-専用カラムを設けなくても、テキストフィールドやJSONフィールドに柔軟に格納できます。
+| 情報の種類 | 保存先コレクション |
+|-----------|-------------------|
+| 読書体験のコンテキスト（状況・きっかけ等） | `/readings/{readingId}` |
+| 対話から抽出した気づき・学び | `/readings/{readingId}/insights` |
+| ユーザーの属性・価値観・状況 | `/users/{userId}` の `currentProfile` |
+| プロファイルの変遷 | `/users/{userId}/profileHistory` |
 
-**Phase 2以降で検討する拡張:**
-- BOOKSテーブルの拡張（ISBN、出版社、ジャンル、表紙画像、書籍説明等）
-- より詳細なユーザープロファイル管理（時系列での思想の変化を追跡）
-- 生ログへの参照管理の最適化
+※ 各フィールドの詳細はエージェント実装時に柔軟に決定。Firestoreはスキーマレスのため、事前の厳密な定義は不要。
+
+**プロファイル更新フロー:**
+1. AIが対話からプロファイル変更を検出
+2. 現在の`currentProfile`を`profileHistory`にコピー（スナップショット）
+3. `currentProfile`を更新
+4. `profileHistory`には変更のトリガーとなった`readingId`を記録
 
 ---
 
 ## 生ログ層のストレージ構造（Google Cloud Storage）
 
 ```
-/users/{user_id}/
-  ├── conversations/
-  │   ├── {reading_id}/
-  │   │   ├── full_log.json  # 対話の完全ログ（AI応答、タイムスタンプ等を含む）
-  │   │   └── metadata.json
-  ├── reading_sessions/
-  │   ├── {reading_id}/
-  │   │   ├── session_data.json  # 読書セッション中の全入力データ
+/users/{userId}/
+  ├── sessions/
+  │   ├── {readingId}/
+  │   │   ├── {sessionId}/
+  │   │   │   ├── full_log.json       # 対話の完全ログ（AI応答、タイムスタンプ等）
+  │   │   │   ├── audio/              # 音声入力の生データ（Phase 2以降）
+  │   │   │   │   ├── {messageId}.webm
+  │   │   │   │   └── ...
+  │   │   │   └── metadata.json       # セッションメタデータ
   │   │   └── ...
+  ├── profile_snapshots/
+  │   ├── {historyId}.json            # プロファイル変更時のスナップショット
+  │   └── ...
 ```
+
+**Firestoreとの対応:**
+- `sessions/{readingId}/{sessionId}/full_log.json` ← Firestore `/readings/{readingId}/sessions/{sessionId}` の `gcsLogPath` が参照
+- `profile_snapshots/{historyId}.json` ← Firestore `/profileHistory/{historyId}` に対応
 
 **生ログの利点:**
 - 将来的に新しいAIモデルで再分析可能
 - 対話の文脈やニュアンスを完全に保持
+- 音声の生データも保存（将来的な音声分析に対応）
 - マルチモーダルなアート生成（映像化・漫画化）の素材として活用
 
 ---
@@ -179,7 +199,7 @@ MVPの対話でAgentが聞き出す情報は、以下の形で保存します：
 
 ### 1) 実行基盤（Agent Engine）
 **会話・ツール実行・セッション管理**
-- **Agent Framework: Google ADK (Agent Development Kit)** ← 採用予定
+- **Agent Framework: Agent Development Kit (ADK)** ← 採用予定
 - LLM API: Gemini API / OpenAI API (GPT-4) / Anthropic Claude
 - その他Framework: LangChain / LangGraph（参考）
 - セッション管理: Firestore Session / Redis
