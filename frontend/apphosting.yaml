@@ -20,3 +20,8 @@ env:
     availability:
       - BUILD
       - RUNTIME
+  - variable: NEXT_PUBLIC_API_URL
+    secret: backend-api-url
+    availability:
+      - BUILD
+      - RUNTIME
