@@ -57,8 +57,8 @@ export function ProfileChatInterface({ onEntryAdded }: Props) {
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 border rounded-lg bg-gray-50 min-h-[400px]">
+    <div className="flex flex-col h-full min-h-0">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 border rounded-lg bg-gray-50 min-h-[300px] max-h-[400px]">
         {messages.length === 0 && (
           <div className="text-center text-gray-400 py-8">
             <p>AIとの対話を始めましょう</p>

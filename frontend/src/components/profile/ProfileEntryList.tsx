@@ -1,10 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { ProfileEntry, ProfileEntryType } from "@/lib/types";
+import { ProfileEntryForm } from "./ProfileEntryForm";
 
 interface Props {
   entries: ProfileEntry[];
   onDelete?: (entryId: string) => void;
+  onEdit?: (entryId: string, data: { entry_type: ProfileEntryType; content: string; note?: string }) => void;
 }
 
 const typeLabels: Record<ProfileEntryType, string> = {
