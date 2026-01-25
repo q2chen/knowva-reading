@@ -481,5 +481,17 @@ User → POST /api/recommendations/generate → FastAPI
 - バックグラウンドジョブ: Cloud Tasks / Celery（Phase 2以降）
 
 ### インフラ
-- **Google Cloud Agent Engine**
-- 非同期処理: Cloud Functions（Phase 2以降）
+
+#### 本番環境（デプロイ済み）
+- **フロントエンド:** Firebase App Hosting
+  - `/frontend` ディレクトリをデプロイ
+  - GitHub pushトリガーで自動デプロイ
+- **バックエンド:** Cloud Run
+  - `/backend/Dockerfile` を使用
+  - GitHub pushトリガーで自動デプロイ
+- **データベース:** Firestore（本番）
+- **認証:** Firebase Auth
+
+#### Phase 2以降
+- **Agent Engine:** `adk deploy agent_engine` でデプロイ予定
+- 非同期処理: Cloud Functions

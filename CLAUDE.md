@@ -10,12 +10,20 @@ Knowva（ノヴァ）は、AIによる読書体験支援アプリケーション
 
 ## プロジェクト状態
 
-MVP実装済み。以下の機能が動作する：
+**本番環境デプロイ済み。** 以下の機能が動作する：
 - Firebase Auth（メール/パスワード）によるユーザー認証
 - 読書記録のCRUD
 - 読書振り返りエージェントとの対話（ADK + Gemini）
 - 対話からのInsight抽出・保存
 - プロファイル表示（読み取り専用、静的）
+- 音声入力対応（Web Speech API）
+- 読書前後の心境変化の可視化
+
+**本番環境構成:**
+- フロントエンド: Firebase App Hosting（`/frontend`）
+- バックエンド: Cloud Run（`/backend/Dockerfile`）
+- データベース: Firestore
+- CI/CD: GitHub pushトリガーで自動デプロイ
 
 Phase 2の機能（GCS生ログ保存、プロファイル抽出エージェント、推薦エージェント、SSEストリーミング等）はコード内に`# TODO(phase2):` コメントで記録されている。
 
@@ -131,6 +139,7 @@ npm run lint     # lint
 - **バックエンド:** Python 3.12+ (FastAPI) + uv
 - **認証:** Firebase Auth（メール/パスワード）
 - **インフラ（ローカル）:** Firebase Emulator Suite
+- **インフラ（本番）:** Firebase App Hosting + Cloud Run + Firestore
 - **Firebase Project ID:** `knowva-reading`
 
 ## AIエージェント

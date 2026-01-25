@@ -24,7 +24,9 @@ const typeColors: Record<ProfileEntryType, string> = {
   other: "bg-gray-100 text-gray-700",
 };
 
-export function ProfileEntryList({ entries, onDelete }: Props) {
+export function ProfileEntryList({ entries, onDelete, onEdit }: Props) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+
   // タイプごとにグルーピング
   const grouped = entries.reduce(
     (acc, entry) => {
@@ -55,43 +57,79 @@ export function ProfileEntryList({ entries, onDelete }: Props) {
                   key={entry.id}
                   className="p-3 bg-white rounded-lg border border-gray-200 group"
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <span
-                        className={`inline-block px-2 py-0.5 text-xs rounded-full mb-1 ${typeColors[entry.entry_type]}`}
-                      >
-                        {typeLabels[entry.entry_type]}
-                      </span>
-                      <p className="text-sm text-gray-800">{entry.content}</p>
-                      {entry.note && (
-                        <p className="text-xs text-gray-500 mt-1">{entry.note}</p>
-                      )}
-                    </div>
-                    {onDelete && (
-                      <button
-                        onClick={() => onDelete(entry.id)}
-                        className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity ml-2"
-                        title="削除"
-                      >
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M6 18L18 6M6 6l12 12"
-                          />
-                        </svg>
-                      </button>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-400 mt-2">
-                    {new Date(entry.created_at).toLocaleDateString("ja-JP")}
-                  </p>
+                  {editingId === entry.id ? (
+                    <ProfileEntryForm
+                      entry={entry}
+                      onSave={(data) => {
+                        onEdit?.(entry.id, data);
+                        setEditingId(null);
+                      }}
+                      onCancel={() => setEditingId(null)}
+                    />
+                  ) : (
+                    <>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <span
+                            className={`inline-block px-2 py-0.5 text-xs rounded-full mb-1 ${typeColors[entry.entry_type]}`}
+                          >
+                            {typeLabels[entry.entry_type]}
+                          </span>
+                          <p className="text-sm text-gray-800">{entry.content}</p>
+                          {entry.note && (
+                            <p className="text-xs text-gray-500 mt-1">{entry.note}</p>
+                          )}
+                        </div>
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2">
+                          {onEdit && (
+                            <button
+                              onClick={() => setEditingId(entry.id)}
+                              className="text-gray-400 hover:text-blue-500"
+                              title="編集"
+                            >
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                />
+                              </svg>
+                            </button>
+                          )}
+                          {onDelete && (
+                            <button
+                              onClick={() => onDelete(entry.id)}
+                              className="text-gray-400 hover:text-red-500"
+                              title="削除"
+                            >
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M6 18L18 6M6 6l12 12"
+                                />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-400 mt-2">
+                        {new Date(entry.created_at).toLocaleDateString("ja-JP")}
+                      </p>
+                    </>
+                  )}
                 </div>
               ))}
             </div>

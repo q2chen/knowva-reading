@@ -3,13 +3,15 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { apiClient } from "@/lib/api";
-import { ProfileEntry } from "@/lib/types";
+import { ProfileEntry, ProfileEntryType } from "@/lib/types";
 import { ProfileChatInterface } from "@/components/profile/ProfileChatInterface";
 import { ProfileEntryList } from "@/components/profile/ProfileEntryList";
+import { ProfileEntryForm } from "@/components/profile/ProfileEntryForm";
 
 export default function ProfileSettingsPage() {
   const [entries, setEntries] = useState<ProfileEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showAddForm, setShowAddForm] = useState(false);
 
   const fetchEntries = useCallback(async () => {
     try {
@@ -25,6 +27,43 @@ export default function ProfileSettingsPage() {
   useEffect(() => {
     fetchEntries();
   }, [fetchEntries]);
+
+  const handleAddEntry = async (data: {
+    entry_type: ProfileEntryType;
+    content: string;
+    note?: string;
+  }) => {
+    try {
+      const newEntry = await apiClient<ProfileEntry>("/api/profile/entries", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+      setEntries((prev) => [newEntry, ...prev]);
+      setShowAddForm(false);
+    } catch (error) {
+      console.error("Failed to add entry:", error);
+    }
+  };
+
+  const handleEditEntry = async (
+    entryId: string,
+    data: { entry_type: ProfileEntryType; content: string; note?: string }
+  ) => {
+    try {
+      const updated = await apiClient<ProfileEntry>(
+        `/api/profile/entries/${entryId}`,
+        {
+          method: "PUT",
+          body: JSON.stringify(data),
+        }
+      );
+      setEntries((prev) =>
+        prev.map((e) => (e.id === entryId ? updated : e))
+      );
+    } catch (error) {
+      console.error("Failed to update entry:", error);
+    }
+  };
 
   const handleDeleteEntry = async (entryId: string) => {
     try {
@@ -57,7 +96,7 @@ export default function ProfileSettingsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* 左側: 対話エリア */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 overflow-hidden">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">
             AIと対話する
           </h2>
@@ -70,15 +109,42 @@ export default function ProfileSettingsPage() {
 
         {/* 右側: 現在のエントリ一覧 */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            登録済みの情報 ({entries.length})
-          </h2>
-          {entries.length === 0 ? (
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">
+              登録済みの情報 ({entries.length})
+            </h2>
+            {!showAddForm && (
+              <button
+                onClick={() => setShowAddForm(true)}
+                className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                + 手動で追加
+              </button>
+            )}
+          </div>
+
+          {showAddForm && (
+            <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <h3 className="text-sm font-medium text-gray-700 mb-3">
+                新規追加
+              </h3>
+              <ProfileEntryForm
+                onSave={handleAddEntry}
+                onCancel={() => setShowAddForm(false)}
+              />
+            </div>
+          )}
+
+          {entries.length === 0 && !showAddForm ? (
             <p className="text-sm text-gray-400 text-center py-4">
-              まだ情報がありません。AIと対話して追加しましょう。
+              まだ情報がありません。AIと対話するか、手動で追加しましょう。
             </p>
           ) : (
-            <ProfileEntryList entries={entries} onDelete={handleDeleteEntry} />
+            <ProfileEntryList
+              entries={entries}
+              onDelete={handleDeleteEntry}
+              onEdit={handleEditEntry}
+            />
           )}
         </div>
       </div>

@@ -428,6 +428,29 @@ async def list_profile_entries(
     return results
 
 
+async def update_profile_entry(
+    user_id: str, entry_id: str, data: dict
+) -> Optional[dict]:
+    """プロファイルエントリを更新する。"""
+    db: AsyncClient = get_firestore_client()
+    doc_ref = (
+        db.collection("users")
+        .document(user_id)
+        .collection("profileEntries")
+        .document(entry_id)
+    )
+    doc = await doc_ref.get()
+    if not doc.exists:
+        return None
+
+    update_data = {k: v for k, v in data.items() if v is not None}
+    update_data["updated_at"] = _now()
+
+    await doc_ref.update(update_data)
+    updated = await doc_ref.get()
+    return {"id": updated.id, **updated.to_dict()}
+
+
 async def delete_profile_entry(user_id: str, entry_id: str) -> bool:
     """プロファイルエントリを削除する。"""
     db: AsyncClient = get_firestore_client()

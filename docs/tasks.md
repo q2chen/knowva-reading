@@ -24,8 +24,12 @@
     *   [x] Insightの保存機能（対話中のツール呼び出しによる自動保存）を実装する。
     *   [x] プロファイル表示画面（読み取り専用）を実装する。
 3.  **テスト・デプロイフェーズ**
-    *   [ ] 全体の動作確認とバグ修正を行う。
-    *   [ ] テスト環境にデプロイし、関係者で実際に使ってみる。
+    *   [x] 全体の動作確認とバグ修正を行う。
+    *   [x] 本番環境にデプロイする。
+        * フロントエンド: Firebase App Hosting
+        * バックエンド: Cloud Run（Dockerfileベース）
+        * データベース: Firestore（本番）
+        * CI/CD: GitHub pushトリガーで自動デプロイ
 
 ---
 
@@ -50,12 +54,16 @@
 - [ ] 推薦画面の実装
 
 ### インフラ
+- [x] 本番環境デプロイ完了
+    - フロントエンド: Firebase App Hosting（`/frontend`をデプロイ）
+    - バックエンド: Cloud Run（`/backend/Dockerfile`を使用）
+    - CI/CD: GitHub pushトリガーで自動デプロイ
 - [ ] Agent Engineデプロイ対応 - `adk deploy agent_engine` でデプロイ。SessionServiceをAgent Engine管理に切り替え、`GOOGLE_GENAI_USE_VERTEXAI=TRUE`（APIキー不要、サービスアカウント認証）
 - [ ] 本番Firebase Auth設定（Googleログイン等追加）
-- [ ] CI/CDパイプライン構築 - GitHub Actions + `adk deploy agent_engine`。Workload Identity Federationでサービスアカウント認証。トリガーは `push: branches: [main]` のみ（パブリックリポジトリのためfork PRからのデプロイを防止）。Pool条件で `attribute.repository` と `attribute.ref` を制限すること
 
 ### 機能拡張
-- [ ] 音声入力対応（Speech to Text）
+- [x] 音声入力対応（Speech to Text） - Web Speech API実装済み
+- [x] 読書前後の心境変化の可視化 - MoodForm/MoodChart実装済み
 - [ ] 読書履歴の可視化・分析機能
 - [ ] 書籍検索API連携（Google Books等）
 - [ ] ベクトル検索・全文検索基盤

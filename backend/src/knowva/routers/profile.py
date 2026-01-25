@@ -118,6 +118,27 @@ async def create_profile_entry(
     return result
 
 
+@router.put("/entries/{entry_id}", response_model=ProfileEntryResponse)
+async def update_profile_entry(
+    entry_id: str,
+    body: ProfileEntryCreate,
+    user: dict = Depends(get_current_user),
+):
+    """プロファイルエントリを更新する。"""
+    result = await firestore.update_profile_entry(
+        user_id=user["uid"],
+        entry_id=entry_id,
+        data={
+            "entry_type": body.entry_type,
+            "content": body.content,
+            "note": body.note,
+        },
+    )
+    if not result:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    return result
+
+
 @router.delete("/entries/{entry_id}")
 async def delete_profile_entry(
     entry_id: str,
