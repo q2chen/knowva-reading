@@ -148,19 +148,23 @@ export default function ReadingDetailPage() {
         </div>
       </div>
 
-      {/* 心境の記録・可視化セクション */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">
-            📊 心境の変化
-          </h2>
+      {/* 心境の記録・可視化セクション（折りたたみ可能） */}
+      <details className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6 group">
+        <summary className="p-4 cursor-pointer list-none flex items-center justify-between hover:bg-gray-50 rounded-lg">
+          <div className="flex items-center gap-2">
+            <span className="text-gray-400 group-open:rotate-90 transition-transform">▶</span>
+            <h2 className="text-lg font-semibold text-gray-900">
+              📊 心境の変化
+            </h2>
+          </div>
           <p className="text-xs text-gray-500">
             AIとの対話から自動記録されます
           </p>
+        </summary>
+        <div className="px-6 pb-6">
+          {moodComparison && <MoodChart comparison={moodComparison} />}
         </div>
-
-        {moodComparison && <MoodChart comparison={moodComparison} />}
-      </div>
+      </details>
 
       {/* Insights */}
       <div className="mb-6">
