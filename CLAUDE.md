@@ -231,8 +231,17 @@ frontend/
 ├── package.json
 └── next.config.ts
 
-firebase.json                # Emulator設定
+firebase.json                # Emulator設定（ローカル専用）
+.firebaserc                  # Firebaseプロジェクト設定
 ```
+
+## ローカル環境専用ファイル
+
+以下のファイルはローカル開発環境専用で、本番環境には影響しない:
+- `firebase.json` - Firebase Emulatorの設定（ポート番号等）
+- `.firebaserc` - ローカルで使用するFirebaseプロジェクトID（`knowva-reading-485401`）
+
+**注意:** ローカル環境ではプロジェクトID `knowva-reading-485401` を使用し、本番環境では `knowva-reading` を使用する。エミュレータ起動時は `.firebaserc` のプロジェクトIDが使われるため、環境変数の `GOOGLE_CLOUD_PROJECT` や `NEXT_PUBLIC_FB_PROJECT_ID` も同じIDに合わせる必要がある。
 
 ## 注意事項
 

@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from google.cloud.firestore import AsyncClient
+from google.cloud.firestore_v1.base_query import FieldFilter
 
 from knowva.dependencies import get_firestore_client
 
@@ -278,7 +279,7 @@ async def save_mood(user_id: str, reading_id: str, data: dict) -> dict:
         .collection("readings")
         .document(reading_id)
         .collection("moods")
-        .where("mood_type", "==", mood_type)
+        .where(filter=FieldFilter("mood_type", "==", mood_type))
     )
     existing = None
     async for doc in existing_docs.stream():
@@ -333,7 +334,7 @@ async def get_mood(user_id: str, reading_id: str, mood_type: str) -> Optional[di
         .collection("readings")
         .document(reading_id)
         .collection("moods")
-        .where("mood_type", "==", mood_type)
+        .where(filter=FieldFilter("mood_type", "==", mood_type))
     )
     async for doc in docs.stream():
         return {"id": doc.id, **doc.to_dict()}
@@ -418,7 +419,7 @@ async def list_profile_entries(
     query = db.collection("users").document(user_id).collection("profileEntries")
 
     if entry_type:
-        query = query.where("entry_type", "==", entry_type)
+        query = query.where(filter=FieldFilter("entry_type", "==", entry_type))
 
     query = query.order_by("created_at", direction="DESCENDING")
 

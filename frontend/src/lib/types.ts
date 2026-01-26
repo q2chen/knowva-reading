@@ -140,3 +140,59 @@ export interface AllInsightsResponse {
   grouped_by: "book" | "type";
   groups: InsightGroup[];
 }
+
+// --- SSEストリーミング ---
+
+export type SSEEventType =
+  | "message_start"
+  | "text_delta"
+  | "text_done"
+  | "tool_call_start"
+  | "tool_call_done"
+  | "message_done"
+  | "error"
+  | "ping";
+
+export interface SSEMessageStartData {
+  message_id: string;
+}
+
+export interface SSETextDeltaData {
+  delta: string;
+}
+
+export interface SSETextDoneData {
+  text: string;
+}
+
+export interface SSEToolCallStartData {
+  tool_name: string;
+  tool_call_id: string;
+}
+
+export interface SSEToolCallDoneData {
+  tool_call_id: string;
+  result: unknown;
+}
+
+export interface SSEMessageDoneData {
+  message: Message;
+}
+
+export interface SSEErrorData {
+  code: string;
+  message: string;
+}
+
+export interface ToolCallState {
+  name: string;
+  id: string;
+  result?: unknown;
+}
+
+export interface StreamingState {
+  isStreaming: boolean;
+  currentText: string;
+  messageId: string | null;
+  toolCalls: ToolCallState[];
+}

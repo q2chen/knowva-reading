@@ -1,8 +1,13 @@
+import json
 import logging
+import time
+from collections.abc import AsyncGenerator
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from google.adk.runners import Runner
 from google.genai import types
+from sse_starlette import EventSourceResponse, ServerSentEvent
 
 from knowva.agents import reading_reflection_agent
 from knowva.middleware.firebase_auth import get_current_user
@@ -14,6 +19,13 @@ from knowva.services.session_service import get_session_service
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def json_serializer(obj):
+    """JSONシリアライズ時にdatetimeをISO形式に変換する。"""
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
 APP_NAME = "knowva"
 
@@ -80,8 +92,8 @@ async def send_message(
     body: MessageCreate,
     user: dict = Depends(get_current_user),
 ):
-    """メッセージを送信し、AIからの応答を得る。"""
-    # TODO(phase2): SSEストリーミング対応
+    """メッセージを送信し、AIからの応答を得る（非ストリーミング版）。"""
+    # NOTE: SSEストリーミング版は send_message_stream() に実装済み
     session = await firestore.get_session(user["uid"], reading_id, session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -167,6 +179,135 @@ async def list_messages(
 ):
     """セッションのメッセージ履歴を取得する。"""
     return await firestore.list_messages(user["uid"], reading_id, session_id)
+
+
+@router.post("/{reading_id}/sessions/{session_id}/messages/stream")
+async def send_message_stream(
+    reading_id: str,
+    session_id: str,
+    body: MessageCreate,
+    user: dict = Depends(get_current_user),
+):
+    """メッセージを送信し、AIからの応答をSSEでストリーミング配信する。"""
+    session = await firestore.get_session(user["uid"], reading_id, session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if session.get("ended_at"):
+        raise HTTPException(status_code=400, detail="Session has ended")
+
+    # ユーザーメッセージをFirestoreに保存
+    await firestore.save_message(
+        user_id=user["uid"],
+        reading_id=reading_id,
+        session_id=session_id,
+        data={"role": "user", "message": body.message, "input_type": body.input_type},
+    )
+
+    async def event_generator() -> AsyncGenerator[ServerSentEvent, None]:
+        """ADKイベントをSSEイベントに変換するジェネレーター"""
+        # ADKセッションの取得/作成
+        session_service = get_session_service()
+        adk_session = await session_service.get_session(
+            app_name=APP_NAME, user_id=user["uid"], session_id=session_id
+        )
+        if not adk_session:
+            adk_session = await session_service.create_session(
+                app_name=APP_NAME,
+                user_id=user["uid"],
+                session_id=session_id,
+                state={
+                    "reading_id": reading_id,
+                    "user_id": user["uid"],
+                    "session_type": session.get("session_type", "during_reading"),
+                },
+            )
+
+        runner = get_runner()
+        user_content = types.Content(role="user", parts=[types.Part(text=body.message)])
+
+        message_id = f"msg_{session_id}_{int(time.time() * 1000)}"
+        accumulated_text = ""
+
+        # メッセージ開始イベント
+        yield ServerSentEvent(data=json.dumps({"message_id": message_id}), event="message_start")
+
+        try:
+            async for event in runner.run_async(
+                user_id=user["uid"],
+                session_id=session_id,
+                new_message=user_content,
+            ):
+                # ツール呼び出しイベントの処理
+                if hasattr(event, "actions") and event.actions:
+                    if hasattr(event.actions, "tool_calls") and event.actions.tool_calls:
+                        for tc in event.actions.tool_calls:
+                            tool_name = getattr(tc, "name", None) or getattr(
+                                tc, "function", {}
+                            ).get("name", "unknown")
+                            tool_id = getattr(tc, "id", f"tc_{int(time.time() * 1000)}")
+                            yield ServerSentEvent(
+                                data=json.dumps({"tool_name": tool_name, "tool_call_id": tool_id}),
+                                event="tool_call_start",
+                            )
+
+                # テキストコンテンツの処理
+                if event.content and event.content.parts:
+                    for part in event.content.parts:
+                        if part.text:
+                            # テキスト差分を配信
+                            new_text = part.text
+                            if new_text != accumulated_text:
+                                # 差分のみ送信
+                                delta = (
+                                    new_text[len(accumulated_text) :]
+                                    if new_text.startswith(accumulated_text)
+                                    else new_text
+                                )
+                                if delta:
+                                    yield ServerSentEvent(
+                                        data=json.dumps({"delta": delta}), event="text_delta"
+                                    )
+                                accumulated_text = new_text
+
+        except Exception as e:
+            logger.error(f"ADK runner error: {e}", exc_info=True)
+            yield ServerSentEvent(
+                data=json.dumps(
+                    {
+                        "code": "runner_error",
+                        "message": "エラーが発生しました。もう一度お試しください。",
+                    }
+                ),
+                event="error",
+            )
+            return
+
+        # 応答がない場合のフォールバック
+        if not accumulated_text:
+            accumulated_text = "申し訳ございません。応答を生成できませんでした。"
+            yield ServerSentEvent(data=json.dumps({"delta": accumulated_text}), event="text_delta")
+
+        # AIの応答をFirestoreに保存
+        ai_message = await firestore.save_message(
+            user_id=user["uid"],
+            reading_id=reading_id,
+            session_id=session_id,
+            data={"role": "assistant", "message": accumulated_text, "input_type": "text"},
+        )
+
+        # テキスト完了イベント
+        yield ServerSentEvent(data=json.dumps({"text": accumulated_text}), event="text_done")
+
+        # メッセージ完了イベント
+        yield ServerSentEvent(
+            data=json.dumps({"message": ai_message}, default=json_serializer),
+            event="message_done",
+        )
+
+    return EventSourceResponse(
+        event_generator(),
+        headers={"Cache-Control": "no-cache"},
+    )
 
 
 @router.post("/{reading_id}/sessions/{session_id}/end", response_model=SessionResponse)
