@@ -257,11 +257,55 @@ async def ensure_user_exists(user_id: str, email: Optional[str] = None) -> dict:
             "email": email,
             "name": None,
             "current_profile": {},
+            "settings": {"interaction_mode": "guided"},
             "created_at": _now(),
         }
         await doc_ref.set(data)
         return {"user_id": user_id, **data}
     return {"user_id": doc.id, **doc.to_dict()}
+
+
+# --- User Settings ---
+
+
+async def get_user_settings(user_id: str) -> dict:
+    """ユーザー設定を取得する。存在しない場合はデフォルト値を返す。"""
+    db: AsyncClient = get_firestore_client()
+    doc = await db.collection("users").document(user_id).get()
+    if doc.exists:
+        data = doc.to_dict()
+        settings = data.get("settings", {})
+        # デフォルト値の補完
+        return {
+            "interaction_mode": settings.get("interaction_mode", "guided"),
+        }
+    # ドキュメントが存在しない場合はデフォルト値
+    return {"interaction_mode": "guided"}
+
+
+async def update_user_settings(user_id: str, settings: dict) -> dict:
+    """ユーザー設定を更新する。"""
+    db: AsyncClient = get_firestore_client()
+    doc_ref = db.collection("users").document(user_id)
+    doc = await doc_ref.get()
+
+    if not doc.exists:
+        # ドキュメントが存在しない場合は作成
+        data = {
+            "email": None,
+            "name": None,
+            "current_profile": {},
+            "settings": settings,
+            "created_at": _now(),
+        }
+        await doc_ref.set(data)
+        return settings
+
+    # 既存のsettingsとマージ
+    current_settings = doc.to_dict().get("settings", {})
+    updated_settings = {**current_settings, **settings}
+    await doc_ref.update({"settings": updated_settings})
+    return updated_settings
 
 
 # --- Mood Records (読書前後の心境) ---

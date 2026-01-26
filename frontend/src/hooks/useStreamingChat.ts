@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef } from "react";
 import { sendMessageStream, SSECallbacks } from "@/lib/api";
-import type { Message, StreamingState } from "@/lib/types";
+import type { Message, StreamingState, OptionsState } from "@/lib/types";
 
 export interface StatusUpdateResult {
   new_status: "not_started" | "reading" | "completed";
@@ -14,6 +14,7 @@ interface UseStreamingChatOptions {
   onMessageComplete?: (message: Message) => void;
   onError?: (error: string) => void;
   onStatusUpdate?: (result: StatusUpdateResult) => void;
+  onOptionsRequest?: (options: OptionsState) => void;
 }
 
 export function useStreamingChat({
@@ -22,12 +23,14 @@ export function useStreamingChat({
   onMessageComplete,
   onError,
   onStatusUpdate,
+  onOptionsRequest,
 }: UseStreamingChatOptions) {
   const [streamingState, setStreamingState] = useState<StreamingState>({
     isStreaming: false,
     currentText: "",
     messageId: null,
     toolCalls: [],
+    optionsRequest: null,
   });
 
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -45,6 +48,7 @@ export function useStreamingChat({
         currentText: "",
         messageId: null,
         toolCalls: [],
+        optionsRequest: null,
       });
       toolCallMapRef.current.clear();
 
@@ -95,12 +99,26 @@ export function useStreamingChat({
             });
           }
         },
+        onOptionsRequest: (data) => {
+          const optionsState: OptionsState = {
+            prompt: data.prompt,
+            options: data.options,
+            allowMultiple: data.allow_multiple,
+            allowFreeform: data.allow_freeform,
+          };
+          setStreamingState((prev) => ({
+            ...prev,
+            optionsRequest: optionsState,
+          }));
+          onOptionsRequest?.(optionsState);
+        },
         onMessageDone: (data) => {
           setStreamingState({
             isStreaming: false,
             currentText: "",
             messageId: null,
             toolCalls: [],
+            optionsRequest: null,
           });
           onMessageComplete?.(data.message);
         },
@@ -110,6 +128,7 @@ export function useStreamingChat({
             currentText: "",
             messageId: null,
             toolCalls: [],
+            optionsRequest: null,
           });
           onError?.(data.message);
         },
@@ -119,6 +138,7 @@ export function useStreamingChat({
             currentText: "",
             messageId: null,
             toolCalls: [],
+            optionsRequest: null,
           });
           onError?.(error.message);
         },
@@ -141,11 +161,12 @@ export function useStreamingChat({
             currentText: "",
             messageId: null,
             toolCalls: [],
+            optionsRequest: null,
           });
         }
       }
     },
-    [readingId, sessionId, onMessageComplete, onError, onStatusUpdate]
+    [readingId, sessionId, onMessageComplete, onError, onStatusUpdate, onOptionsRequest]
   );
 
   const cancelStream = useCallback(() => {
@@ -155,13 +176,23 @@ export function useStreamingChat({
       currentText: "",
       messageId: null,
       toolCalls: [],
+      optionsRequest: null,
     });
+  }, []);
+
+  const clearOptionsRequest = useCallback(() => {
+    setStreamingState((prev) => ({
+      ...prev,
+      optionsRequest: null,
+    }));
   }, []);
 
   return {
     streamingState,
     sendMessage,
     cancelStream,
+    clearOptionsRequest,
     isStreaming: streamingState.isStreaming,
+    optionsRequest: streamingState.optionsRequest,
   };
 }

@@ -151,6 +151,7 @@ export type SSEEventType =
   | "text_done"
   | "tool_call_start"
   | "tool_call_done"
+  | "options_request"
   | "message_done"
   | "error"
   | "ping";
@@ -177,6 +178,13 @@ export interface SSEToolCallDoneData {
   result: unknown;
 }
 
+export interface SSEOptionsRequestData {
+  prompt: string;
+  options: string[];
+  allow_multiple: boolean;
+  allow_freeform: boolean;
+}
+
 export interface SSEMessageDoneData {
   message: Message;
 }
@@ -192,9 +200,25 @@ export interface ToolCallState {
   result?: unknown;
 }
 
+export interface OptionsState {
+  prompt: string;
+  options: string[];
+  allowMultiple: boolean;
+  allowFreeform: boolean;
+}
+
 export interface StreamingState {
   isStreaming: boolean;
   currentText: string;
   messageId: string | null;
   toolCalls: ToolCallState[];
+  optionsRequest: OptionsState | null;
+}
+
+// === ユーザー設定 ===
+
+export type InteractionMode = "freeform" | "guided";
+
+export interface UserSettings {
+  interaction_mode: InteractionMode;
 }

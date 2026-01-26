@@ -267,6 +267,19 @@ async def send_message_stream(
                                         tool_id = tid
                                         break
 
+                            # present_optionsツールの場合は特別なSSEイベントを送信
+                            if tool_name == "present_options" and isinstance(result, dict):
+                                if result.get("status") == "options_presented":
+                                    yield ServerSentEvent(
+                                        data=json.dumps({
+                                            "prompt": result.get("prompt", ""),
+                                            "options": result.get("options", []),
+                                            "allow_multiple": result.get("allow_multiple", True),
+                                            "allow_freeform": result.get("allow_freeform", True),
+                                        }),
+                                        event="options_request",
+                                    )
+
                             if tool_id:
                                 yield ServerSentEvent(
                                     data=json.dumps({

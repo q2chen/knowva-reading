@@ -6,8 +6,10 @@ import type {
   SSETextDoneData,
   SSEToolCallStartData,
   SSEToolCallDoneData,
+  SSEOptionsRequestData,
   SSEMessageDoneData,
   SSEErrorData,
+  UserSettings,
 } from "./types";
 
 // Next.js rewrites経由で同一オリジンからAPIにアクセス（CORSを回避）
@@ -43,6 +45,7 @@ export interface SSECallbacks {
   onTextDone?: (data: SSETextDoneData) => void;
   onToolCallStart?: (data: SSEToolCallStartData) => void;
   onToolCallDone?: (data: SSEToolCallDoneData) => void;
+  onOptionsRequest?: (data: SSEOptionsRequestData) => void;
   onMessageDone?: (data: SSEMessageDoneData) => void;
   onError?: (data: SSEErrorData) => void;
   onConnectionError?: (error: Error) => void;
@@ -122,6 +125,9 @@ export async function sendMessageStream(
               case "tool_call_done":
                 callbacks.onToolCallDone?.(data);
                 break;
+              case "options_request":
+                callbacks.onOptionsRequest?.(data);
+                break;
               case "message_done":
                 callbacks.onMessageDone?.(data);
                 break;
@@ -142,4 +148,25 @@ export async function sendMessageStream(
     }
     callbacks.onConnectionError?.(error as Error);
   }
+}
+
+// --- ユーザー設定API ---
+
+/**
+ * ユーザー設定を取得する
+ */
+export async function getUserSettings(): Promise<UserSettings> {
+  return apiClient<UserSettings>("/api/profile/settings");
+}
+
+/**
+ * ユーザー設定を更新する
+ */
+export async function updateUserSettings(
+  settings: Partial<UserSettings>
+): Promise<UserSettings> {
+  return apiClient<UserSettings>("/api/profile/settings", {
+    method: "PUT",
+    body: JSON.stringify(settings),
+  });
 }

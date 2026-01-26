@@ -4,6 +4,25 @@ from typing import Literal, Optional
 from pydantic import BaseModel
 
 
+# === ユーザー設定 ===
+
+InteractionMode = Literal["freeform", "guided"]
+
+
+class UserSettings(BaseModel):
+    """ユーザーのアプリ設定"""
+
+    interaction_mode: InteractionMode = "guided"
+    # freeform: 自由入力モード（自分で考えて言語化したいユーザー向け）
+    # guided: 選択肢ガイドモード（AIが選択肢を提示し、タップで選択したいユーザー向け）
+
+
+class UserSettingsUpdate(BaseModel):
+    """ユーザー設定更新リクエスト"""
+
+    interaction_mode: Optional[InteractionMode] = None
+
+
 class UserProfile(BaseModel):
     life_stage: Optional[str] = None
     situation: Optional[str] = None

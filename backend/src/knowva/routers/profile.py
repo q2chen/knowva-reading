@@ -14,6 +14,8 @@ from knowva.models.profile import (
     InsightWithBook,
     ProfileEntryCreate,
     ProfileEntryResponse,
+    UserSettings,
+    UserSettingsUpdate,
 )
 from knowva.services import firestore
 from knowva.services.session_service import get_session_service
@@ -149,6 +151,34 @@ async def delete_profile_entry(
     if not success:
         raise HTTPException(status_code=404, detail="Entry not found")
     return {"status": "deleted"}
+
+
+# === ユーザー設定 ===
+
+
+@router.get("/settings", response_model=UserSettings)
+async def get_user_settings(
+    user: dict = Depends(get_current_user),
+):
+    """ユーザー設定を取得する。"""
+    settings = await firestore.get_user_settings(user["uid"])
+    return UserSettings(**settings)
+
+
+@router.put("/settings", response_model=UserSettings)
+async def update_user_settings(
+    body: UserSettingsUpdate,
+    user: dict = Depends(get_current_user),
+):
+    """ユーザー設定を更新する。"""
+    update_data = body.model_dump(exclude_none=True)
+    if not update_data:
+        # 変更がない場合は現在の設定を返す
+        settings = await firestore.get_user_settings(user["uid"])
+        return UserSettings(**settings)
+
+    settings = await firestore.update_user_settings(user["uid"], update_data)
+    return UserSettings(**settings)
 
 
 # === プロファイルエージェントとのチャット ===

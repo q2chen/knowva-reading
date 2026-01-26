@@ -44,14 +44,15 @@ async def save_insight(
 async def get_reading_context(tool_context: ToolContext) -> dict:
     """現在の読書記録のコンテキスト情報を取得する。
 
-    読書の背景情報（書籍タイトル、著者、読書状況、動機など）とセッションタイプを参照するために使う。
+    読書の背景情報（書籍タイトル、著者、読書状況、動機など）とセッションタイプ、
+    ユーザー設定（対話モード）を参照するために使う。
     最初のメッセージで必ず呼び出すこと。
 
     Args:
         tool_context: ツール実行コンテキスト（セッション情報を含む）。
 
     Returns:
-        dict: 読書コンテキストとセッションタイプを含む。
+        dict: 読書コンテキスト、セッションタイプ、ユーザー設定を含む。
     """
     user_id = tool_context.session.state.get("user_id")
     reading_id = tool_context.session.state.get("reading_id")
@@ -61,11 +62,16 @@ async def get_reading_context(tool_context: ToolContext) -> dict:
         return {"status": "error", "error_message": "Session context not found"}
 
     result = await firestore.get_reading(user_id=user_id, reading_id=reading_id)
+
+    # ユーザー設定を取得
+    user_settings = await firestore.get_user_settings(user_id)
+
     if result:
         return {
             "status": "success",
             "context": result,
             "session_type": session_type or "during_reading",
+            "user_settings": user_settings,
         }
     return {"status": "error", "error_message": "Reading not found"}
 
@@ -164,3 +170,38 @@ async def update_reading_status(
     if result:
         return {"status": "success", "new_status": new_status}
     return {"status": "error", "error_message": "Failed to update reading status"}
+
+
+async def present_options(
+    prompt: str,
+    options: list[str],
+    allow_multiple: bool,
+    tool_context: ToolContext,
+) -> dict:
+    """ユーザーに選択肢を提示して回答を促す。
+
+    guidedモード（選択肢ガイドモード）のユーザー向けのツール。
+    このツールを呼び出すと、UIに選択肢が表示される。
+    ユーザーは選択肢から選ぶことも、無視して自由に入力することもできる。
+
+    **重要**: user_settings.interaction_mode が "guided" の場合のみ使用すること。
+    "freeform" モードのユーザーには使用しないこと。
+
+    Args:
+        prompt: ユーザーに表示する質問文。
+        options: 選択肢のリスト（3〜6個程度が適切）。
+        allow_multiple: 複数選択を許可するかどうか。Trueの場合、ユーザーは複数の選択肢を選べる。
+        tool_context: ツール実行コンテキスト。
+
+    Returns:
+        dict: ツール呼び出し結果。SSEを通じてフロントエンドに選択肢が送信される。
+    """
+    # このツールの戻り値はSSEイベントとしてフロントエンドに送信される
+    # sessions.py の _adk_to_sse_events で特別に処理される
+    return {
+        "status": "options_presented",
+        "prompt": prompt,
+        "options": options,
+        "allow_multiple": allow_multiple,
+        "allow_freeform": True,  # 常に自由入力も許可
+    }

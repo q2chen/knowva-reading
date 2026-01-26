@@ -10,6 +10,7 @@ SSEEventType = Literal[
     "text_done",
     "tool_call_start",
     "tool_call_done",
+    "options_request",  # 選択肢提示イベント（guidedモード用）
     "message_done",
     "error",
     "ping",
@@ -46,6 +47,19 @@ class SSEToolCallDone(BaseModel):
 
     tool_call_id: str
     result: Any
+
+
+class SSEOptionsRequest(BaseModel):
+    """選択肢提示イベント（guidedモード用）
+
+    AIが選択肢を提示し、ユーザーが選択するためのイベント。
+    ユーザーは選択肢から選ぶことも、自由入力することも可能。
+    """
+
+    prompt: str  # 質問文
+    options: list[str]  # 選択肢のリスト
+    allow_multiple: bool = True  # 複数選択を許可するか
+    allow_freeform: bool = True  # 自由入力も許可するか（常にTrue推奨）
 
 
 class SSEError(BaseModel):

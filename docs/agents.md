@@ -82,11 +82,40 @@ Knowvaは ADK (Agent Development Kit) を使用した3つの独立したエー�
 **ツール:**
 | ツール名 | 機能 |
 |---------|------|
-| `get_reading_context` | 読書情報と現在のステータスを取得 |
+| `get_reading_context` | 読書情報と現在のステータス、ユーザー設定を取得 |
 | `save_insight` | 気づき・学びを保存（learning/impression/question/connection） |
 | `save_mood` | 心境データを保存（before/after） |
 | `save_profile_entry` | 対話中に得られたプロファイル情報を保存（Onboarding Agentと同じスキーマ） |
 | `update_reading_status` | 読書ステータスを更新（not_started/reading/completed） |
+| `present_options` | ユーザーに選択肢を提示（guidedモード専用） |
+
+**対話モード（interaction_mode）:**
+
+Reading Agentは2種類の対話スタイルに対応しています。ユーザーは設定画面から選択できます。
+
+| モード | 説明 | 対象ユーザー |
+|-------|------|-------------|
+| `freeform` | 自由入力モード。質問は自由回答形式で投げかけ、ユーザー自身の言葉を引き出す。選択肢は提示しない。 | 自分で考えて言語化したいユーザー |
+| `guided` | 選択肢ガイドモード。`present_options`ツールで選択肢を積極的に提示。ユーザーはタップで選択可能（複数選択可）。自由入力も可能。 | AIに選択肢を示してほしいユーザー |
+
+**guidedモード時のpresent_optionsツール:**
+
+```python
+present_options(
+    prompt="この本を読んで、どんな気持ちになりましたか？",
+    options=[
+        "わくわくした・興奮した",
+        "考えさせられた・深く思考した",
+        "心が温かくなった",
+        "少しモヤモヤした・複雑な気持ち",
+        "新しい発見があった",
+        "自分の経験と重なった"
+    ],
+    allow_multiple=True
+)
+```
+
+ツール呼び出し時、SSE経由で`options_request`イベントがフロントエンドに送信され、UIに選択肢ボタンが表示されます。ユーザーは選択肢をタップするか、無視して自由入力することも可能です。
 
 **サブエージェント:**
 

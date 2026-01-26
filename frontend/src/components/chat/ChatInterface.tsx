@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { apiClient } from "@/lib/api";
-import { Message } from "@/lib/types";
+import { Message, OptionsState } from "@/lib/types";
 import { MessageBubble } from "./MessageBubble";
 import { StreamingMessageBubble } from "./StreamingMessageBubble";
 import { ChatInput } from "./ChatInput";
+import { OptionsSelector } from "./OptionsSelector";
 import { useStreamingChat, StatusUpdateResult } from "@/hooks/useStreamingChat";
 
 interface Props {
@@ -25,6 +26,7 @@ export function ChatInterface({
   const [isLoading, setIsLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentOptions, setCurrentOptions] = useState<OptionsState | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // ストリーミングフック
@@ -32,6 +34,7 @@ export function ChatInterface({
     streamingState,
     sendMessage: sendStreamingMessage,
     isStreaming,
+    clearOptionsRequest,
   } = useStreamingChat({
     readingId,
     sessionId,
@@ -44,6 +47,9 @@ export function ChatInterface({
       setMessages((prev) => prev.filter((m) => !m.id.startsWith("temp-")));
     },
     onStatusUpdate,
+    onOptionsRequest: (options) => {
+      setCurrentOptions(options);
+    },
   });
 
   useEffect(() => {
@@ -71,6 +77,8 @@ export function ChatInterface({
     inputType: "text" | "voice" = "text"
   ) => {
     setError(null);
+    setCurrentOptions(null); // 選択肢をクリア
+    clearOptionsRequest();
 
     // ユーザーメッセージを即時表示（楽観的更新）
     const optimisticMsg: Message = {
@@ -104,6 +112,17 @@ export function ChatInterface({
         setIsLoading(false);
       }
     }
+  };
+
+  const handleOptionsSelect = (selectedOptions: string[]) => {
+    // 選択肢を結合してメッセージとして送信
+    const text = selectedOptions.join("、");
+    handleSend(text, "text");
+  };
+
+  const handleOptionsDismiss = () => {
+    setCurrentOptions(null);
+    clearOptionsRequest();
   };
 
   if (initialLoading) {
@@ -152,6 +171,19 @@ export function ChatInterface({
 
         <div ref={messagesEndRef} />
       </div>
+
+      {/* 選択肢表示 */}
+      {currentOptions && (
+        <div className="px-4 py-2 border-t border-gray-100">
+          <OptionsSelector
+            options={currentOptions}
+            onSelect={handleOptionsSelect}
+            onDismiss={handleOptionsDismiss}
+            disabled={isLoading || isStreaming}
+          />
+        </div>
+      )}
+
       <ChatInput onSend={handleSend} disabled={isLoading || isStreaming} />
     </div>
   );
