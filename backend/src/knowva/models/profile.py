@@ -7,6 +7,7 @@ from pydantic import BaseModel
 # === ユーザー設定 ===
 
 InteractionMode = Literal["freeform", "guided"]
+TimelineOrder = Literal["random", "newest"]
 
 
 class UserSettings(BaseModel):
@@ -16,11 +17,28 @@ class UserSettings(BaseModel):
     # freeform: 自由入力モード（自分で考えて言語化したいユーザー向け）
     # guided: 選択肢ガイドモード（AIが選択肢を提示し、タップで選択したいユーザー向け）
 
+    timeline_order: TimelineOrder = "random"
+    # random: ランダム順（デフォルト）
+    # newest: 新着順
+
 
 class UserSettingsUpdate(BaseModel):
     """ユーザー設定更新リクエスト"""
 
     interaction_mode: Optional[InteractionMode] = None
+    timeline_order: Optional[TimelineOrder] = None
+
+
+class NameUpdateRequest(BaseModel):
+    """ニックネーム更新リクエスト"""
+
+    name: str  # 1-30文字
+
+
+class NameUpdateResponse(BaseModel):
+    """ニックネーム更新レスポンス"""
+
+    name: str
 
 
 class UserProfile(BaseModel):

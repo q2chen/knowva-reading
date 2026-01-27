@@ -227,7 +227,12 @@ export default function ReadingDetailPage() {
         ) : (
           <div className="grid gap-3">
             {insights.map((insight) => (
-              <InsightCard key={insight.id} insight={insight} />
+              <InsightCard
+                key={insight.id}
+                insight={insight}
+                readingId={readingId}
+                showVisibilityControl
+              />
             ))}
           </div>
         )}

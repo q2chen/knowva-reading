@@ -12,6 +12,8 @@ from knowva.models.profile import (
     AllInsightsResponse,
     InsightGroup,
     InsightWithBook,
+    NameUpdateRequest,
+    NameUpdateResponse,
     ProfileEntryCreate,
     ProfileEntryResponse,
     UserSettings,
@@ -151,6 +153,40 @@ async def delete_profile_entry(
     if not success:
         raise HTTPException(status_code=404, detail="Entry not found")
     return {"status": "deleted"}
+
+
+# === ニックネーム設定 ===
+
+
+@router.get("/name", response_model=NameUpdateResponse)
+async def get_user_name(
+    user: dict = Depends(get_current_user),
+):
+    """ユーザーのニックネームを取得する。"""
+    name = await firestore.get_user_name(user["uid"])
+    return NameUpdateResponse(name=name or "")
+
+
+@router.put("/name", response_model=NameUpdateResponse)
+async def update_user_name(
+    body: NameUpdateRequest,
+    user: dict = Depends(get_current_user),
+):
+    """ユーザーのニックネームを更新する。"""
+    # バリデーション: 1-30文字
+    name = body.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="ニックネームを入力してください")
+    if len(name) > 30:
+        raise HTTPException(status_code=400, detail="ニックネームは30文字以内で入力してください")
+
+    user_id = user["uid"]
+    result = await firestore.update_user_name(user_id, name)
+
+    # 公開Insight（visibility: public）のdisplay_nameを一括更新
+    await firestore.update_public_insights_display_name(user_id, name)
+
+    return NameUpdateResponse(**result)
 
 
 # === ユーザー設定 ===

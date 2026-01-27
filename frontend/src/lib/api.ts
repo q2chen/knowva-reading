@@ -13,6 +13,10 @@ import type {
   MentorFeedback,
   MentorMessage,
   MentorFeedbackType,
+  InsightVisibility,
+  InsightVisibilityResponse,
+  TimelineResponse,
+  TimelineOrder,
 } from "./types";
 
 // Next.js rewrites経由で同一オリジンからAPIにアクセス（CORSを回避）
@@ -310,4 +314,62 @@ export async function initializeReadingSession(
     }
     callbacks.onConnectionError?.(error as Error);
   }
+}
+
+// --- ニックネームAPI ---
+
+/**
+ * ニックネームを取得する
+ */
+export async function getNickname(): Promise<{ name: string }> {
+  return apiClient<{ name: string }>("/api/profile/name");
+}
+
+/**
+ * ニックネームを更新する
+ */
+export async function updateNickname(name: string): Promise<{ name: string }> {
+  return apiClient<{ name: string }>("/api/profile/name", {
+    method: "PUT",
+    body: JSON.stringify({ name }),
+  });
+}
+
+// --- Insight公開設定API ---
+
+/**
+ * Insightの公開設定を更新する
+ */
+export async function updateInsightVisibility(
+  readingId: string,
+  insightId: string,
+  visibility: InsightVisibility
+): Promise<InsightVisibilityResponse> {
+  return apiClient<InsightVisibilityResponse>(
+    `/api/readings/${readingId}/insights/${insightId}/visibility`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ visibility }),
+    }
+  );
+}
+
+// --- タイムラインAPI ---
+
+/**
+ * タイムライン（公開Insight一覧）を取得する
+ */
+export async function getTimeline(
+  order: TimelineOrder = "random",
+  limit: number = 20,
+  cursor?: string
+): Promise<TimelineResponse> {
+  const params = new URLSearchParams({
+    order,
+    limit: String(limit),
+  });
+  if (cursor) {
+    params.append("cursor", cursor);
+  }
+  return apiClient<TimelineResponse>(`/api/timeline?${params.toString()}`);
 }

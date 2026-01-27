@@ -25,9 +25,18 @@ async def save_insight(
     user_id = tool_context.session.state.get("user_id")
     reading_id = tool_context.session.state.get("reading_id")
     session_id = tool_context.session.id
+    session_type = tool_context.session.state.get("session_type")
 
     if not user_id or not reading_id:
         return {"status": "error", "error_message": "Session context not found"}
+
+    # session_typeからreading_statusを決定
+    session_to_status = {
+        "before_reading": "not_started",
+        "during_reading": "reading",
+        "after_reading": "completed",
+    }
+    reading_status = session_to_status.get(session_type)
 
     result = await firestore.save_insight(
         user_id=user_id,
@@ -36,6 +45,7 @@ async def save_insight(
             "content": content,
             "type": insight_type,
             "session_ref": session_id,
+            "reading_status": reading_status,
         },
     )
     return {"status": "success", "insight_id": result["id"]}

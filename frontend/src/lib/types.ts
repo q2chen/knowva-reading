@@ -42,10 +42,14 @@ export interface Message {
   created_at: string;
 }
 
+export type InsightVisibility = "private" | "public" | "anonymous";
+
 export interface Insight {
   id: string;
   content: string;
   type: "learning" | "impression" | "question" | "connection";
+  visibility?: InsightVisibility;
+  reading_status?: ReadingStatus;
   session_ref?: string;
   created_at: string;
 }
@@ -218,9 +222,11 @@ export interface StreamingState {
 // === ユーザー設定 ===
 
 export type InteractionMode = "freeform" | "guided";
+export type TimelineOrder = "random" | "newest";
 
 export interface UserSettings {
   interaction_mode: InteractionMode;
+  timeline_order?: TimelineOrder;
 }
 
 // --- メンター機能 ---
@@ -241,4 +247,30 @@ export interface MentorMessage {
   role: "user" | "assistant";
   message: string;
   created_at: string;
+}
+
+// --- タイムライン (POP) ---
+
+export interface TimelineInsight {
+  id: string;
+  insight_id: string;
+  content: string;
+  type: "learning" | "impression" | "question" | "connection";
+  display_name: string;
+  book: BookEmbed;
+  reading_status?: ReadingStatus;
+  published_at: string;
+  is_own: boolean;
+}
+
+export interface TimelineResponse {
+  insights: TimelineInsight[];
+  next_cursor: string | null;
+  has_more: boolean;
+}
+
+export interface InsightVisibilityResponse {
+  id: string;
+  visibility: InsightVisibility;
+  published_at?: string;
 }

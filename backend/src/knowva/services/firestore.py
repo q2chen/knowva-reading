@@ -278,9 +278,10 @@ async def get_user_settings(user_id: str) -> dict:
         # デフォルト値の補完
         return {
             "interaction_mode": settings.get("interaction_mode", "guided"),
+            "timeline_order": settings.get("timeline_order", "random"),
         }
     # ドキュメントが存在しない場合はデフォルト値
-    return {"interaction_mode": "guided"}
+    return {"interaction_mode": "guided", "timeline_order": "random"}
 
 
 async def update_user_settings(user_id: str, settings: dict) -> dict:
@@ -636,3 +637,231 @@ async def get_latest_mentor_feedback(user_id: str) -> Optional[dict]:
     """最新のメンターフィードバックを取得する。"""
     feedbacks = await list_mentor_feedbacks(user_id, limit=1)
     return feedbacks[0] if feedbacks else None
+
+
+# --- User Name (Nickname) ---
+
+
+async def update_user_name(user_id: str, name: str) -> dict:
+    """ユーザーのニックネームを更新する。"""
+    db: AsyncClient = get_firestore_client()
+    doc_ref = db.collection("users").document(user_id)
+    doc = await doc_ref.get()
+
+    if not doc.exists:
+        # ドキュメントが存在しない場合は作成
+        data = {
+            "email": None,
+            "name": name,
+            "current_profile": {},
+            "settings": {"interaction_mode": "guided", "timeline_order": "random"},
+            "created_at": _now(),
+        }
+        await doc_ref.set(data)
+        return {"name": name}
+
+    await doc_ref.update({"name": name})
+    return {"name": name}
+
+
+async def get_user_name(user_id: str) -> Optional[str]:
+    """ユーザーのニックネームを取得する。"""
+    db: AsyncClient = get_firestore_client()
+    doc = await db.collection("users").document(user_id).get()
+    if doc.exists:
+        return doc.to_dict().get("name")
+    return None
+
+
+# --- Insight Visibility & Public Insights ---
+
+
+async def get_insight(user_id: str, reading_id: str, insight_id: str) -> Optional[dict]:
+    """特定のInsightを取得する。"""
+    db: AsyncClient = get_firestore_client()
+    doc = await (
+        db.collection("users")
+        .document(user_id)
+        .collection("readings")
+        .document(reading_id)
+        .collection("insights")
+        .document(insight_id)
+        .get()
+    )
+    if doc.exists:
+        return {"id": doc.id, **doc.to_dict()}
+    return None
+
+
+async def update_insight_visibility(
+    user_id: str, reading_id: str, insight_id: str, visibility: str
+) -> Optional[dict]:
+    """Insightの公開設定を更新する。"""
+    db: AsyncClient = get_firestore_client()
+    doc_ref = (
+        db.collection("users")
+        .document(user_id)
+        .collection("readings")
+        .document(reading_id)
+        .collection("insights")
+        .document(insight_id)
+    )
+    doc = await doc_ref.get()
+    if not doc.exists:
+        return None
+
+    await doc_ref.update({"visibility": visibility})
+    updated = await doc_ref.get()
+    return {"id": updated.id, **updated.to_dict()}
+
+
+async def create_public_insight(
+    user_id: str,
+    reading_id: str,
+    insight_id: str,
+    insight_data: dict,
+    book_data: dict,
+    visibility: str,
+    display_name: str,
+) -> dict:
+    """公開Insightを作成する。"""
+    db: AsyncClient = get_firestore_client()
+
+    # 既存の公開Insightがあるか確認
+    existing_docs = db.collection("publicInsights").where(
+        filter=FieldFilter("insight_id", "==", insight_id)
+    )
+    existing = None
+    async for doc in existing_docs.stream():
+        existing = doc
+        break
+
+    now = _now()
+
+    if existing:
+        # 既存のドキュメントを更新
+        doc_ref = existing.reference
+        update_data = {
+            "visibility": visibility,
+            "display_name": display_name,
+            "content": insight_data.get("content"),
+            "type": insight_data.get("type"),
+            "reading_status": insight_data.get("reading_status"),
+            "book": book_data,
+        }
+        await doc_ref.update(update_data)
+        updated = await doc_ref.get()
+        return {"id": updated.id, **updated.to_dict()}
+    else:
+        # 新規作成
+        doc_ref = db.collection("publicInsights").document()
+        doc_data = {
+            "insight_id": insight_id,
+            "user_id": user_id,
+            "reading_id": reading_id,
+            "content": insight_data.get("content"),
+            "type": insight_data.get("type"),
+            "reading_status": insight_data.get("reading_status"),
+            "visibility": visibility,
+            "display_name": display_name,
+            "book": book_data,
+            "created_at": insight_data.get("created_at", now),
+            "published_at": now,
+        }
+        await doc_ref.set(doc_data)
+        return {"id": doc_ref.id, **doc_data}
+
+
+async def delete_public_insight(insight_id: str) -> bool:
+    """公開Insightを削除する。"""
+    db: AsyncClient = get_firestore_client()
+    docs = db.collection("publicInsights").where(
+        filter=FieldFilter("insight_id", "==", insight_id)
+    )
+    deleted = False
+    async for doc in docs.stream():
+        await doc.reference.delete()
+        deleted = True
+    return deleted
+
+
+async def update_public_insights_display_name(user_id: str, new_name: str) -> int:
+    """ユーザーの公開Insight（visibility: public）のdisplay_nameを一括更新する。
+
+    Args:
+        user_id: ユーザーID
+        new_name: 新しい表示名
+
+    Returns:
+        更新した件数
+    """
+    db: AsyncClient = get_firestore_client()
+
+    # user_idとvisibility: "public"でフィルタ
+    query = (
+        db.collection("publicInsights")
+        .where(filter=FieldFilter("user_id", "==", user_id))
+        .where(filter=FieldFilter("visibility", "==", "public"))
+    )
+
+    updated_count = 0
+    async for doc in query.stream():
+        await doc.reference.update({"display_name": new_name})
+        updated_count += 1
+
+    return updated_count
+
+
+async def list_public_insights(
+    limit: int = 20, cursor: Optional[str] = None
+) -> tuple[list[dict], Optional[str], bool]:
+    """公開Insight一覧を取得する（新着順）。"""
+    db: AsyncClient = get_firestore_client()
+    query = db.collection("publicInsights").order_by(
+        "published_at", direction="DESCENDING"
+    )
+
+    if cursor:
+        # カーソルからpublished_atを復元
+        from datetime import datetime
+
+        cursor_time = datetime.fromisoformat(cursor)
+        query = query.start_after({"published_at": cursor_time})
+
+    query = query.limit(limit + 1)  # 次ページがあるか確認するため+1
+
+    results = []
+    async for doc in query.stream():
+        results.append({"id": doc.id, **doc.to_dict()})
+
+    has_more = len(results) > limit
+    if has_more:
+        results = results[:limit]
+
+    next_cursor = None
+    if results and has_more:
+        last_item = results[-1]
+        published_at = last_item.get("published_at")
+        if published_at:
+            if hasattr(published_at, "isoformat"):
+                next_cursor = published_at.isoformat()
+            else:
+                next_cursor = str(published_at)
+
+    return results, next_cursor, has_more
+
+
+async def list_public_insights_random(limit: int = 20) -> list[dict]:
+    """公開Insight一覧をランダムに取得する。"""
+    import random
+
+    db: AsyncClient = get_firestore_client()
+    # 全件取得してシャッフル（スケール時は改善が必要）
+    docs = db.collection("publicInsights")
+
+    results = []
+    async for doc in docs.stream():
+        results.append({"id": doc.id, **doc.to_dict()})
+
+    random.shuffle(results)
+    return results[:limit]
