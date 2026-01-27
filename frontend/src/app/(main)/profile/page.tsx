@@ -1,41 +1,85 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { useAuth } from "@/providers/AuthProvider";
+import { useEffect, useState, useCallback } from "react";
 import { apiClient } from "@/lib/api";
-import { ProfileEntry, AllInsightsResponse } from "@/lib/types";
-import { InsightList } from "@/components/profile/InsightList";
+import { ProfileEntry, ProfileEntryType, AllInsightsResponse } from "@/lib/types";
+import { ProfileChatInterface } from "@/components/profile/ProfileChatInterface";
 import { ProfileEntryList } from "@/components/profile/ProfileEntryList";
+import { ProfileEntryForm } from "@/components/profile/ProfileEntryForm";
+import { InsightList } from "@/components/profile/InsightList";
 
 export default function ProfilePage() {
-  const { user } = useAuth();
   const [entries, setEntries] = useState<ProfileEntry[]>([]);
-  const [insightsData, setInsightsData] = useState<AllInsightsResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [insightsData, setInsightsData] = useState<AllInsightsResponse | null>(null);
   const [groupBy, setGroupBy] = useState<"book" | "type">("book");
   const [insightsOpen, setInsightsOpen] = useState(true);
-  const [entriesOpen, setEntriesOpen] = useState(true);
 
-  const fetchData = async () => {
+  const fetchEntries = useCallback(async () => {
     try {
-      const [entriesRes, insightsRes] = await Promise.all([
-        apiClient<ProfileEntry[]>("/api/profile/entries"),
-        apiClient<AllInsightsResponse>(`/api/profile/insights?group_by=${groupBy}`),
-      ]);
-      setEntries(entriesRes);
-      setInsightsData(insightsRes);
+      const data = await apiClient<ProfileEntry[]>("/api/profile/entries");
+      setEntries(data);
     } catch (error) {
-      console.error("Failed to fetch profile data:", error);
+      console.error("Failed to fetch entries:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  const fetchInsights = useCallback(async () => {
+    try {
+      const insightsRes = await apiClient<AllInsightsResponse>(`/api/profile/insights?group_by=${groupBy}`);
+      setInsightsData(insightsRes);
+    } catch (error) {
+      console.error("Failed to fetch insights:", error);
+    }
+  }, [groupBy]);
 
   useEffect(() => {
-    fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groupBy]);
+    fetchEntries();
+  }, [fetchEntries]);
+
+  useEffect(() => {
+    fetchInsights();
+  }, [fetchInsights]);
+
+  const handleAddEntry = async (data: {
+    entry_type: ProfileEntryType;
+    content: string;
+    note?: string;
+  }) => {
+    try {
+      const newEntry = await apiClient<ProfileEntry>("/api/profile/entries", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+      setEntries((prev) => [newEntry, ...prev]);
+      setShowAddForm(false);
+    } catch (error) {
+      console.error("Failed to add entry:", error);
+    }
+  };
+
+  const handleEditEntry = async (
+    entryId: string,
+    data: { entry_type: ProfileEntryType; content: string; note?: string }
+  ) => {
+    try {
+      const updated = await apiClient<ProfileEntry>(
+        `/api/profile/entries/${entryId}`,
+        {
+          method: "PUT",
+          body: JSON.stringify(data),
+        }
+      );
+      setEntries((prev) =>
+        prev.map((e) => (e.id === entryId ? updated : e))
+      );
+    } catch (error) {
+      console.error("Failed to update entry:", error);
+    }
+  };
 
   const handleDeleteEntry = async (entryId: string) => {
     try {
@@ -52,73 +96,64 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">プロファイル</h1>
-        <Link
-          href="/profile/settings"
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
-        >
-          プロファイルを編集
-        </Link>
-      </div>
+      <h1 className="text-2xl font-bold text-gray-900">あなた</h1>
 
-      {/* 基本情報 */}
-      <section className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">基本情報</h2>
-        <div className="space-y-2">
-          <p className="text-sm text-gray-600">
-            <span className="font-medium">メール:</span> {user?.email || "-"}
-          </p>
-        </div>
-      </section>
-
-      {/* プロファイルエントリ */}
-      <section className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <button
-          onClick={() => setEntriesOpen(!entriesOpen)}
-          className="w-full flex items-center justify-between p-6 text-left"
-        >
-          <h2 className="text-lg font-semibold text-gray-900">
-            あなたについて ({entries.length})
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* 左側: 対話エリア */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 overflow-hidden">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            AIと対話する
           </h2>
-          <svg
-            className={`w-5 h-5 text-gray-500 transition-transform ${entriesOpen ? "rotate-180" : ""}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19 9l-7 7-7-7"
-            />
-          </svg>
-        </button>
-        {entriesOpen && (
-          <div className="px-6 pb-6">
-            {entries.length === 0 ? (
-              <div className="text-center py-6">
-                <p className="text-sm text-gray-500 mb-4">
-                  まだプロファイル情報がありません。
-                  <br />
-                  AIと対話してあなたのことを教えてください。
-                </p>
-                <Link
-                  href="/profile/settings"
-                  className="text-blue-600 hover:underline text-sm"
-                >
-                  プロファイルを設定する
-                </Link>
-              </div>
-            ) : (
-              <ProfileEntryList entries={entries} onDelete={handleDeleteEntry} />
+          <p className="text-sm text-gray-500 mb-4">
+            あなたの目標、興味、読みたい本などを自由に話してください。
+            AIが聞き出してプロファイルに追加します。
+          </p>
+          <ProfileChatInterface onEntryAdded={fetchEntries} />
+        </div>
+
+        {/* 右側: 現在のエントリ一覧 */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">
+              あなたについて ({entries.length})
+            </h2>
+            {!showAddForm && (
+              <button
+                onClick={() => setShowAddForm(true)}
+                className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                + 手動で追加
+              </button>
             )}
           </div>
-        )}
-      </section>
 
-      {/* 全読書からのInsight一覧 */}
+          {showAddForm && (
+            <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <h3 className="text-sm font-medium text-gray-700 mb-3">
+                新規追加
+              </h3>
+              <ProfileEntryForm
+                onSave={handleAddEntry}
+                onCancel={() => setShowAddForm(false)}
+              />
+            </div>
+          )}
+
+          {entries.length === 0 && !showAddForm ? (
+            <p className="text-sm text-gray-400 text-center py-4">
+              まだ情報がありません。AIと対話するか、手動で追加しましょう。
+            </p>
+          ) : (
+            <ProfileEntryList
+              entries={entries}
+              onDelete={handleDeleteEntry}
+              onEdit={handleEditEntry}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* 全読書からのInsight一覧（折りたたみ） */}
       <section className="bg-white rounded-lg shadow-sm border border-gray-200">
         <button
           onClick={() => setInsightsOpen(!insightsOpen)}

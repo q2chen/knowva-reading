@@ -39,10 +39,19 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           </Link>
           <nav className="flex items-center gap-4">
             <Link href="/home" className="text-sm text-gray-600 hover:text-gray-900">
+              ホーム
+            </Link>
+            <Link href="/readings" className="text-sm text-gray-600 hover:text-gray-900">
               読書一覧
             </Link>
             <Link href="/profile" className="text-sm text-gray-600 hover:text-gray-900">
-              プロフィール
+              あなた
+            </Link>
+            <Link href="/pop" className="text-sm text-gray-600 hover:text-gray-900">
+              POP
+            </Link>
+            <Link href="/profile/settings" className="text-sm text-gray-600 hover:text-gray-900">
+              設定
             </Link>
             <button
               onClick={handleLogout}
