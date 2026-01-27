@@ -6,11 +6,18 @@ interface Props {
 }
 
 export function ReadingCard({ reading }: Props) {
-  const statusLabel = reading.status === "completed" ? "読了" : "読書中";
+  const statusLabel = 
+    reading.status === "completed" 
+      ? "読了" 
+      : reading.status === "not_started" 
+        ? "読書前" 
+        : "読書中";
   const statusColor =
     reading.status === "completed"
       ? "bg-green-100 text-green-700"
-      : "bg-blue-100 text-blue-700";
+      : reading.status === "not_started"
+        ? "bg-gray-100 text-gray-700"
+        : "bg-blue-100 text-blue-700";
 
   return (
     <Link

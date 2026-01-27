@@ -57,7 +57,7 @@ export function ReadingForm({ onCreated, onCancel }: Props) {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 placeholder:text-gray-500"
             placeholder="例: サピエンス全史"
           />
         </div>
@@ -70,7 +70,7 @@ export function ReadingForm({ onCreated, onCancel }: Props) {
             value={author}
             onChange={(e) => setAuthor(e.target.value)}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 placeholder:text-gray-500"
             placeholder="例: ユヴァル・ノア・ハラリ"
           />
         </div>
@@ -81,7 +81,7 @@ export function ReadingForm({ onCreated, onCancel }: Props) {
           <textarea
             value={motivation}
             onChange={(e) => setMotivation(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 placeholder:text-gray-500"
             rows={2}
             placeholder="例: 人類の歴史を俯瞰して現代社会を理解したい"
           />

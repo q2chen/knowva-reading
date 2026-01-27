@@ -42,7 +42,7 @@ export function ProfileEntryForm({ entry, onSave, onCancel }: Props) {
         <select
           value={entryType}
           onChange={(e) => setEntryType(e.target.value as ProfileEntryType)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
         >
           {typeOptions.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -61,7 +61,7 @@ export function ProfileEntryForm({ entry, onSave, onCancel }: Props) {
           onChange={(e) => setContent(e.target.value)}
           placeholder="例: マネジメントスキルを上げたい"
           rows={3}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 placeholder:text-gray-500"
           required
         />
       </div>
@@ -75,7 +75,7 @@ export function ProfileEntryForm({ entry, onSave, onCancel }: Props) {
           value={note}
           onChange={(e) => setNote(e.target.value)}
           placeholder="補足情報があれば"
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 placeholder:text-gray-500"
         />
       </div>
 

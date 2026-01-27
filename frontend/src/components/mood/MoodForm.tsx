@@ -133,7 +133,7 @@ export function MoodForm({ moodType, onSave, initialData, disabled }: Props) {
           onChange={(e) => setDominantEmotion(e.target.value)}
           placeholder="または自由に入力..."
           disabled={disabled || isSaving}
-          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 bg-white text-gray-900 placeholder:text-gray-500"
         />
       </div>
 
@@ -149,7 +149,7 @@ export function MoodForm({ moodType, onSave, initialData, disabled }: Props) {
           rows={3}
           disabled={disabled || isSaving}
           maxLength={500}
-          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none disabled:opacity-50"
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none disabled:opacity-50 bg-white text-gray-900 placeholder:text-gray-500"
         />
         <p className="text-xs text-gray-400 text-right">{note.length}/500</p>
       </div>

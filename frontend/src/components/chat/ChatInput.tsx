@@ -128,7 +128,7 @@ export function ChatInput({ onSend, disabled }: Props) {
           disabled={disabled || isListening}
           placeholder="メッセージを入力..."
           rows={1}
-          className="flex-1 px-4 py-2 border border-gray-300 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 max-h-32 disabled:opacity-50 disabled:bg-gray-50"
+          className="flex-1 px-4 py-2 border border-gray-300 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 max-h-32 disabled:opacity-50 disabled:bg-gray-50 bg-white text-gray-900 placeholder:text-gray-500"
         />
 
         {/* 音声入力ボタン */}

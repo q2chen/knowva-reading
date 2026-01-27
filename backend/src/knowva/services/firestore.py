@@ -22,7 +22,7 @@ async def create_reading(user_id: str, data: dict) -> dict:
         **data,
         "user_id": user_id,
         "read_count": 1,
-        "status": "reading",
+        "status": "not_started",
         "start_date": now,
         "completed_date": None,
         "latest_summary": None,
