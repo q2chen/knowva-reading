@@ -11,12 +11,12 @@ env:
   - variable: NEXT_PUBLIC_FB_API_KEY
     secret: firebase-api-key
   - variable: NEXT_PUBLIC_FB_AUTH_DOMAIN
-    value: knowva-reading.firebaseapp.com
+    value: knowva-reading-485401.firebaseapp.com
     availability:
       - BUILD
       - RUNTIME
   - variable: NEXT_PUBLIC_FB_PROJECT_ID
-    value: knowva-reading
+    value: knowva-reading-485401
     availability:
       - BUILD
       - RUNTIME
