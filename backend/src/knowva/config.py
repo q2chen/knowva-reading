@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     firestore_emulator_host: str = "localhost:8080"
     firebase_auth_emulator_host: str = "localhost:9099"
     google_api_key: str = ""
+    google_books_api_key: str = ""  # Google Books API用（空の場合はAPIキーなしで呼び出し）
     google_genai_use_vertexai: str = "FALSE"
     allowed_origins: Union[str, List[str]] = "http://localhost:3000"
 

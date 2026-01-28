@@ -1,12 +1,11 @@
 export interface BookEmbed {
   title: string;
   author: string;
+  cover_url?: string;
 }
 
 export interface ReadingContext {
-  situation?: string;
   motivation?: string;
-  reading_style?: string;
 }
 
 export type ReadingStatus = "not_started" | "reading" | "completed";
@@ -14,6 +13,7 @@ export type ReadingStatus = "not_started" | "reading" | "completed";
 export interface Reading {
   id: string;
   user_id: string;
+  book_id?: string;
   book: BookEmbed;
   read_count: number;
   status: ReadingStatus;
@@ -23,6 +23,49 @@ export interface Reading {
   latest_summary?: string;
   created_at: string;
   updated_at: string;
+}
+
+// --- Book (グローバルコレクション) ---
+
+export type BookSource = "google_books" | "openbd" | "manual";
+
+export interface Book {
+  id: string;
+  isbn: string | null;
+  title: string;
+  author: string;
+  description: string | null;
+  cover_url: string | null;
+  google_books_id: string | null;
+  source: BookSource;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BookSearchResult {
+  google_books_id: string | null;
+  isbn: string | null;
+  title: string;
+  author: string;
+  description: string | null;
+  thumbnail_url: string | null;
+  existing_book_id: string | null;
+  has_reading: boolean;
+}
+
+export interface BookSearchResponse {
+  results: BookSearchResult[];
+  total: number;
+}
+
+export interface BookCreateInput {
+  isbn?: string;
+  title: string;
+  author: string;
+  description?: string;
+  cover_url?: string;
+  google_books_id?: string;
+  source: BookSource;
 }
 
 export interface Session {

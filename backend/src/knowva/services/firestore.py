@@ -865,3 +865,83 @@ async def list_public_insights_random(limit: int = 20) -> list[dict]:
 
     random.shuffle(results)
     return results[:limit]
+
+
+# --- Books (グローバルコレクション) ---
+
+
+async def create_book(data: dict) -> dict:
+    """本を作成する。ISBNがある場合は重複チェックを行う。"""
+    db: AsyncClient = get_firestore_client()
+
+    # ISBNがある場合は重複チェック
+    isbn = data.get("isbn")
+    if isbn:
+        existing = await get_book_by_isbn(isbn)
+        if existing:
+            return existing
+
+    doc_ref = db.collection("books").document()
+    now = _now()
+    doc_data = {
+        **data,
+        "created_at": now,
+        "updated_at": now,
+    }
+    await doc_ref.set(doc_data)
+    return {"id": doc_ref.id, **doc_data}
+
+
+async def get_book(book_id: str) -> Optional[dict]:
+    """本を取得する。"""
+    db: AsyncClient = get_firestore_client()
+    doc = await db.collection("books").document(book_id).get()
+    if doc.exists:
+        return {"id": doc.id, **doc.to_dict()}
+    return None
+
+
+async def get_book_by_isbn(isbn: str) -> Optional[dict]:
+    """ISBNで本を検索する。"""
+    db: AsyncClient = get_firestore_client()
+    # ISBNを正規化（ハイフン除去）
+    normalized_isbn = isbn.replace("-", "")
+
+    docs = db.collection("books").where(filter=FieldFilter("isbn", "==", normalized_isbn))
+    async for doc in docs.stream():
+        return {"id": doc.id, **doc.to_dict()}
+
+    # ハイフン付きで検索（念のため）
+    if normalized_isbn != isbn:
+        docs = db.collection("books").where(filter=FieldFilter("isbn", "==", isbn))
+        async for doc in docs.stream():
+            return {"id": doc.id, **doc.to_dict()}
+
+    return None
+
+
+async def update_book(book_id: str, data: dict) -> Optional[dict]:
+    """本を更新する。"""
+    db: AsyncClient = get_firestore_client()
+    doc_ref = db.collection("books").document(book_id)
+    doc = await doc_ref.get()
+    if not doc.exists:
+        return None
+
+    update_data = {k: v for k, v in data.items() if v is not None}
+    update_data["updated_at"] = _now()
+
+    await doc_ref.update(update_data)
+    updated = await doc_ref.get()
+    return {"id": updated.id, **updated.to_dict()}
+
+
+async def list_user_book_ids(user_id: str) -> list[str]:
+    """ユーザーの読書記録から本IDの一覧を取得する。"""
+    readings = await list_readings(user_id)
+    book_ids = set()
+    for reading in readings:
+        book_id = reading.get("book_id")
+        if book_id:
+            book_ids.add(book_id)
+    return list(book_ids)

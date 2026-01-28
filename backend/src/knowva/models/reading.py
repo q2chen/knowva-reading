@@ -5,19 +5,25 @@ from pydantic import BaseModel
 
 
 class BookEmbed(BaseModel):
+    """Denormalized book data stored within reading for quick access."""
+
     title: str
     author: str
-    # TODO(phase2): book_idでbooksコレクションと紐付け
+    cover_url: Optional[str] = None
 
 
 class ReadingContext(BaseModel):
-    situation: Optional[str] = None
     motivation: Optional[str] = None
-    reading_style: Optional[str] = None
 
 
 class ReadingCreate(BaseModel):
-    book: BookEmbed
+    """Request body for creating a reading.
+
+    Accepts either book_id (new flow) or book (legacy flow) for backward compatibility.
+    """
+
+    book_id: Optional[str] = None  # Reference to /books collection
+    book: Optional[BookEmbed] = None  # Legacy: embedded book data
     reading_context: Optional[ReadingContext] = None
 
 
@@ -30,6 +36,7 @@ class ReadingUpdate(BaseModel):
 class ReadingResponse(BaseModel):
     id: str
     user_id: str
+    book_id: Optional[str] = None  # Reference to /books collection
     book: BookEmbed
     read_count: int = 1
     status: Literal["not_started", "reading", "completed"] = "not_started"

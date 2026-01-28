@@ -20,10 +20,35 @@ async def create_reading(
     body: ReadingCreate,
     user: dict = Depends(get_current_user),
 ):
-    """新しい読書記録を作成する。"""
-    # TODO(phase2): Book Search API連携 (ISBN/タイトル検索)
+    """新しい読書記録を作成する。
+
+    book_id が指定されている場合は /books コレクションから本情報を取得し、
+    BookEmbed として非正規化して保存する。
+    book が直接指定されている場合（レガシー）はそのまま使用する。
+    """
+    book_embed = None
+    book_id = None
+
+    if body.book_id:
+        # 新フロー: book_id から本情報を取得
+        book = await firestore.get_book(body.book_id)
+        if not book:
+            raise HTTPException(status_code=404, detail="Book not found")
+        book_id = body.book_id
+        book_embed = {
+            "title": book["title"],
+            "author": book["author"],
+            "cover_url": book.get("cover_url"),
+        }
+    elif body.book:
+        # レガシーフロー: 直接 book 情報を使用
+        book_embed = body.book.model_dump()
+    else:
+        raise HTTPException(status_code=400, detail="Either book_id or book is required")
+
     data = {
-        "book": body.book.model_dump(),
+        "book_id": book_id,
+        "book": book_embed,
         "reading_context": body.reading_context.model_dump() if body.reading_context else None,
     }
     result = await firestore.create_reading(user["uid"], data)

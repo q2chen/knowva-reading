@@ -17,6 +17,9 @@ import type {
   InsightVisibilityResponse,
   TimelineResponse,
   TimelineOrder,
+  Book,
+  BookSearchResponse,
+  BookCreateInput,
 } from "./types";
 
 // Next.js rewrites経由で同一オリジンからAPIにアクセス（CORSを回避）
@@ -372,4 +375,32 @@ export async function getTimeline(
     params.append("cursor", cursor);
   }
   return apiClient<TimelineResponse>(`/api/timeline?${params.toString()}`);
+}
+
+// --- Book API ---
+
+/**
+ * 書籍を検索する（Google Books API経由）
+ */
+export async function searchBooks(query: string): Promise<BookSearchResponse> {
+  return apiClient<BookSearchResponse>(
+    `/api/books/search?q=${encodeURIComponent(query)}`
+  );
+}
+
+/**
+ * 書籍を作成または取得する
+ */
+export async function createBook(data: BookCreateInput): Promise<Book> {
+  return apiClient<Book>("/api/books", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * 書籍を取得する
+ */
+export async function getBook(bookId: string): Promise<Book> {
+  return apiClient<Book>(`/api/books/${bookId}`);
 }

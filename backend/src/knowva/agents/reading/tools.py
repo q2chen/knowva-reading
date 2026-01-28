@@ -58,11 +58,13 @@ async def get_reading_context(tool_context: ToolContext) -> dict:
     ユーザー設定（対話モード）を参照するために使う。
     最初のメッセージで必ず呼び出すこと。
 
+    book_idが存在する場合は、/booksコレクションから本の詳細情報（概要など）も取得する。
+
     Args:
         tool_context: ツール実行コンテキスト（セッション情報を含む）。
 
     Returns:
-        dict: 読書コンテキスト、セッションタイプ、ユーザー設定を含む。
+        dict: 読書コンテキスト、セッションタイプ、ユーザー設定、本の詳細情報を含む。
     """
     user_id = tool_context.session.state.get("user_id")
     reading_id = tool_context.session.state.get("reading_id")
@@ -77,11 +79,17 @@ async def get_reading_context(tool_context: ToolContext) -> dict:
     user_settings = await firestore.get_user_settings(user_id)
 
     if result:
+        # book_idがある場合は/booksから詳細情報（description等）を取得
+        book_details = None
+        if result.get("book_id"):
+            book_details = await firestore.get_book(result["book_id"])
+
         return {
             "status": "success",
             "context": result,
             "session_type": session_type or "during_reading",
             "user_settings": user_settings,
+            "book_details": book_details,  # 本の詳細情報（description, isbn等）
         }
     return {"status": "error", "error_message": "Reading not found"}
 
