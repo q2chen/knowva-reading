@@ -3,7 +3,6 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel
 
-
 # === ユーザー設定 ===
 
 InteractionMode = Literal["freeform", "guided"]
