@@ -8,6 +8,7 @@ import { ProfileEntryList } from "@/components/profile/ProfileEntryList";
 import { ProfileEntryForm } from "@/components/profile/ProfileEntryForm";
 import { InsightList } from "@/components/profile/InsightList";
 import { ReadingCard } from "@/components/readings/ReadingCard";
+import { QuickVoiceFAB } from "@/components/quick-voice/QuickVoiceFAB";
 import Link from "next/link";
 
 export default function HomePage() {
@@ -24,6 +25,7 @@ export default function HomePage() {
   const [mentorLoading, setMentorLoading] = useState(false);
   const [mentorMessage, setMentorMessage] = useState<string | null>(null);
   const [recentReadings, setRecentReadings] = useState<Reading[]>([]);
+  const [allReadings, setAllReadings] = useState<Reading[]>([]);
 
   const fetchEntries = useCallback(async () => {
     try {
@@ -48,7 +50,9 @@ export default function HomePage() {
   const fetchRecentReadings = useCallback(async () => {
     try {
       const readings = await apiClient<Reading[]>("/api/readings");
-      // updated_at順（降順）でソートして最新4件を取得
+      // 全読書データを保存（FAB用）
+      setAllReadings(readings);
+      // updated_at順（降順）でソートして最新4件を取得（表示用）
       const sorted = readings
         .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
         .slice(0, 4);
@@ -142,6 +146,13 @@ export default function HomePage() {
     }
   };
 
+  // 読書中の本を抽出（全読書データからupdated_at順で最新2冊）
+  const readingInProgress = allReadings
+    .filter((r) => r.status === "reading")
+    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+    .slice(0, 2)
+    .map((r) => ({ id: r.id, bookTitle: r.book.title }));
+
   if (loading) {
     return <div className="text-center py-8 text-gray-500">読み込み中...</div>;
   }
@@ -149,6 +160,9 @@ export default function HomePage() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">ホーム</h1>
+
+      {/* ワンタップ音声入力FAB */}
+      <QuickVoiceFAB readings={readingInProgress} />
 
       {/* 振り返りセクション */}
       <section className="bg-white rounded-lg shadow-sm border border-gray-200">
