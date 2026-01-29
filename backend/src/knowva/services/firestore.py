@@ -945,3 +945,205 @@ async def list_user_book_ids(user_id: str) -> list[str]:
         if book_id:
             book_ids.add(book_id)
     return list(book_ids)
+
+
+# --- Reports (読書レポート) ---
+
+
+async def save_report(user_id: str, reading_id: str, data: dict) -> dict:
+    """レポートを保存する。"""
+    db: AsyncClient = get_firestore_client()
+    doc_ref = (
+        db.collection("users")
+        .document(user_id)
+        .collection("readings")
+        .document(reading_id)
+        .collection("reports")
+        .document()
+    )
+    now = _now()
+    doc_data = {
+        **data,
+        "reading_id": reading_id,
+        "created_at": now,
+        "updated_at": now,
+    }
+    await doc_ref.set(doc_data)
+    return {"id": doc_ref.id, **doc_data}
+
+
+async def list_reports(user_id: str, reading_id: str) -> list[dict]:
+    """レポート一覧を取得する。"""
+    db: AsyncClient = get_firestore_client()
+    docs = (
+        db.collection("users")
+        .document(user_id)
+        .collection("readings")
+        .document(reading_id)
+        .collection("reports")
+        .order_by("created_at", direction="DESCENDING")
+    )
+    results = []
+    async for doc in docs.stream():
+        results.append({"id": doc.id, **doc.to_dict()})
+    return results
+
+
+async def get_latest_report(user_id: str, reading_id: str) -> Optional[dict]:
+    """最新のレポートを取得する。"""
+    reports = await list_reports(user_id, reading_id)
+    return reports[0] if reports else None
+
+
+# --- Action Plans (アクションプラン) ---
+
+
+async def save_action_plan(user_id: str, reading_id: str, data: dict) -> dict:
+    """アクションプランを保存する。"""
+    db: AsyncClient = get_firestore_client()
+    doc_ref = (
+        db.collection("users")
+        .document(user_id)
+        .collection("readings")
+        .document(reading_id)
+        .collection("actionPlans")
+        .document()
+    )
+    now = _now()
+    doc_data = {
+        **data,
+        "reading_id": reading_id,
+        "status": "pending",
+        "completed_at": None,
+        "created_at": now,
+        "updated_at": now,
+    }
+    await doc_ref.set(doc_data)
+    return {"id": doc_ref.id, **doc_data}
+
+
+async def list_action_plans(user_id: str, reading_id: str) -> list[dict]:
+    """アクションプラン一覧を取得する。"""
+    db: AsyncClient = get_firestore_client()
+    docs = (
+        db.collection("users")
+        .document(user_id)
+        .collection("readings")
+        .document(reading_id)
+        .collection("actionPlans")
+        .order_by("created_at")
+    )
+    results = []
+    async for doc in docs.stream():
+        results.append({"id": doc.id, **doc.to_dict()})
+    return results
+
+
+async def update_action_plan(
+    user_id: str, reading_id: str, plan_id: str, data: dict
+) -> Optional[dict]:
+    """アクションプランを更新する。"""
+    db: AsyncClient = get_firestore_client()
+    doc_ref = (
+        db.collection("users")
+        .document(user_id)
+        .collection("readings")
+        .document(reading_id)
+        .collection("actionPlans")
+        .document(plan_id)
+    )
+    doc = await doc_ref.get()
+    if not doc.exists:
+        return None
+
+    update_data = {k: v for k, v in data.items() if v is not None}
+    update_data["updated_at"] = _now()
+
+    # completedに変更された場合はcompleted_atを設定
+    if update_data.get("status") == "completed":
+        update_data["completed_at"] = _now()
+
+    await doc_ref.update(update_data)
+    updated = await doc_ref.get()
+    return {"id": updated.id, **updated.to_dict()}
+
+
+# --- Report Context (レポート生成用コンテキスト) ---
+
+
+async def get_report_context(user_id: str, reading_id: str) -> dict:
+    """レポート生成用のコンテキストを取得する。
+
+    該当Readingのセッション全メッセージ + Insight + プロファイル情報を集約。
+    """
+    # 読書情報
+    reading = await get_reading(user_id, reading_id)
+    if not reading:
+        return {"status": "error", "error": "Reading not found"}
+
+    # セッション一覧
+    sessions = await list_sessions(user_id, reading_id)
+
+    # 全セッションのメッセージを集約
+    all_messages = []
+    for session in sessions:
+        messages = await list_messages(user_id, reading_id, session["id"])
+        all_messages.extend(
+            [
+                {
+                    "session_type": session.get("session_type"),
+                    "role": m.get("role"),
+                    "message": m.get("message"),
+                    "created_at": m.get("created_at"),
+                }
+                for m in messages
+            ]
+        )
+
+    # Insight一覧
+    insights = await list_insights(user_id, reading_id)
+
+    # プロファイル情報
+    profile_entries = await list_profile_entries(user_id)
+
+    # 心境データ
+    mood_comparison = await get_mood_comparison(user_id, reading_id)
+
+    return {
+        "reading": {
+            "id": reading_id,
+            "book": reading.get("book", {}),
+            "status": reading.get("status"),
+            "reading_context": reading.get("reading_context"),
+        },
+        "sessions": [
+            {
+                "id": s["id"],
+                "session_type": s.get("session_type"),
+                "started_at": s.get("started_at"),
+            }
+            for s in sessions
+        ],
+        "messages": all_messages,
+        "insights": [
+            {
+                "id": i.get("id"),
+                "content": i.get("content"),
+                "type": i.get("type"),
+                "reading_status": i.get("reading_status"),
+            }
+            for i in insights
+        ],
+        "profile": {
+            "goals": [e for e in profile_entries if e.get("entry_type") == "goal"],
+            "interests": [
+                e for e in profile_entries if e.get("entry_type") == "interest"
+            ],
+        },
+        "mood_comparison": mood_comparison,
+        "summary": {
+            "session_count": len(sessions),
+            "message_count": len(all_messages),
+            "insight_count": len(insights),
+        },
+    }

@@ -317,3 +317,50 @@ export interface InsightVisibilityResponse {
   visibility: InsightVisibility;
   published_at?: string;
 }
+
+// --- 読書レポート ---
+
+export interface ReportMetadata {
+  session_count: number;
+  insight_count: number;
+  generation_model: string;
+}
+
+export interface Report {
+  id: string;
+  reading_id: string;
+  summary: string;
+  insights_summary: string;
+  context_analysis: string;
+  action_plan_ids: string[];
+  metadata: ReportMetadata;
+  created_at: string;
+  updated_at: string;
+}
+
+// --- アクションプラン ---
+
+export type ActionPlanStatus =
+  | "pending"
+  | "in_progress"
+  | "completed"
+  | "skipped";
+export type ActionPlanDifficulty = "easy" | "medium" | "hard";
+
+export interface ActionPlan {
+  id: string;
+  reading_id: string;
+  action: string;
+  source_insight_id?: string;
+  relevance: string;
+  difficulty: ActionPlanDifficulty;
+  timeframe: string;
+  status: ActionPlanStatus;
+  completed_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ActionPlanUpdateInput {
+  status?: ActionPlanStatus;
+}

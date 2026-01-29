@@ -6,7 +6,16 @@ from slowapi.middleware import SlowAPIMiddleware
 
 from knowva.config import settings  # noqa: F401 (環境変数設定を含むため最初にimport)
 from knowva.middleware.rate_limit import limiter
-from knowva.routers import books, mentor, moods, profile, readings, sessions, timeline
+from knowva.routers import (
+    books,
+    mentor,
+    moods,
+    profile,
+    readings,
+    reports,
+    sessions,
+    timeline,
+)
 
 app = FastAPI(title="Knowva API", version="0.1.0")
 app.state.limiter = limiter
@@ -25,6 +34,7 @@ app.include_router(books.router, prefix="/api/books", tags=["books"])
 app.include_router(readings.router, prefix="/api/readings", tags=["readings"])
 app.include_router(sessions.router, prefix="/api/readings", tags=["sessions"])
 app.include_router(moods.router, prefix="/api/readings", tags=["moods"])
+app.include_router(reports.router, prefix="/api/readings", tags=["reports"])
 app.include_router(profile.router, prefix="/api/profile", tags=["profile"])
 app.include_router(mentor.router, prefix="/api/mentor", tags=["mentor"])
 app.include_router(timeline.router, prefix="/api/timeline", tags=["timeline"])

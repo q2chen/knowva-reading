@@ -3,10 +3,19 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { apiClient } from "@/lib/api";
-import { Reading, ReadingStatus, Insight, Session, MoodComparison, MoodData } from "@/lib/types";
+import { apiClient, getActionPlans } from "@/lib/api";
+import {
+  Reading,
+  ReadingStatus,
+  Insight,
+  Session,
+  MoodComparison,
+  MoodData,
+  ActionPlan,
+} from "@/lib/types";
 import { InsightCard } from "@/components/insights/InsightCard";
 import { MoodChart } from "@/components/mood/MoodChart";
+import { ActionPlanList } from "@/components/action-plan/ActionPlanList";
 
 const STATUS_OPTIONS: { value: ReadingStatus; label: string; emoji: string }[] = [
   { value: "not_started", label: "読書前", emoji: "📖" },
@@ -23,6 +32,7 @@ export default function ReadingDetailPage() {
   const [insights, setInsights] = useState<Insight[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [moodComparison, setMoodComparison] = useState<MoodComparison | null>(null);
+  const [actionPlans, setActionPlans] = useState<ActionPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingStatus, setUpdatingStatus] = useState(false);
 
@@ -75,6 +85,15 @@ export default function ReadingDetailPage() {
 
         // 心境データを取得
         await fetchMoodData();
+
+        // アクションプランを取得
+        try {
+          const plansData = await getActionPlans(readingId);
+          setActionPlans(plansData);
+        } catch {
+          // アクションプランがない場合は空配列
+          setActionPlans([]);
+        }
       } catch {
         router.push("/home");
       } finally {
@@ -184,18 +203,58 @@ export default function ReadingDetailPage() {
         </div>
 
         {/* 対話開始ボタン */}
-        <div className="mt-6">
+        <div className="mt-6 space-y-3">
           <button
             onClick={startSession}
             className="w-full px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-base font-medium flex items-center justify-center gap-2"
           >
             {currentStatusOption.emoji} 対話を始める
           </button>
-          <p className="text-xs text-gray-500 mt-2 text-center">
+          <p className="text-xs text-gray-500 text-center">
             現在のステータス（{currentStatusOption.label}）に応じた対話が始まります
           </p>
+
+          {/* レポートへのリンク */}
+          <Link
+            href={`/readings/${readingId}/report`}
+            className="w-full px-6 py-3 bg-white text-indigo-600 border border-indigo-600 rounded-lg hover:bg-indigo-50 text-base font-medium flex items-center justify-center gap-2"
+          >
+            読書レポートを見る
+          </Link>
         </div>
       </div>
+
+      {/* アクションプランセクション（レポート生成済みの場合のみ表示） */}
+      {actionPlans.length > 0 && (
+        <details
+          className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6 group"
+          open
+        >
+          <summary className="p-4 cursor-pointer list-none flex items-center justify-between hover:bg-gray-50 rounded-lg">
+            <div className="flex items-center gap-2">
+              <span className="text-gray-400 group-open:rotate-90 transition-transform">
+                ▶
+              </span>
+              <h2 className="text-lg font-semibold text-gray-900">
+                アクションプラン (
+                {actionPlans.filter((p) => p.status === "completed").length}/
+                {actionPlans.length})
+              </h2>
+            </div>
+          </summary>
+          <div className="px-6 pb-6">
+            <ActionPlanList
+              readingId={readingId}
+              actionPlans={actionPlans}
+              onUpdate={(updated) => {
+                setActionPlans((prev) =>
+                  prev.map((p) => (p.id === updated.id ? updated : p))
+                );
+              }}
+            />
+          </div>
+        </details>
+      )}
 
       {/* 心境の記録・可視化セクション（折りたたみ可能） */}
       <details className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6 group">
@@ -203,7 +262,7 @@ export default function ReadingDetailPage() {
           <div className="flex items-center gap-2">
             <span className="text-gray-400 group-open:rotate-90 transition-transform">▶</span>
             <h2 className="text-lg font-semibold text-gray-900">
-              📊 心境の変化
+              心境の変化
             </h2>
           </div>
           <p className="text-xs text-gray-500">

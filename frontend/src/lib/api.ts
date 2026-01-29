@@ -20,6 +20,9 @@ import type {
   Book,
   BookSearchResponse,
   BookCreateInput,
+  Report,
+  ActionPlan,
+  ActionPlanUpdateInput,
 } from "./types";
 
 // Next.js rewrites経由で同一オリジンからAPIにアクセス（CORSを回避）
@@ -403,4 +406,137 @@ export async function createBook(data: BookCreateInput): Promise<Book> {
  */
 export async function getBook(bookId: string): Promise<Book> {
   return apiClient<Book>(`/api/books/${bookId}`);
+}
+
+// --- Report API ---
+
+/**
+ * レポート生成をSSEストリーミングで開始する
+ */
+export async function generateReportStream(
+  readingId: string,
+  callbacks: SSECallbacks,
+  signal?: AbortSignal
+): Promise<void> {
+  const user = auth.currentUser;
+  const token = user ? await user.getIdToken() : null;
+
+  const response = await fetch(`/api/readings/${readingId}/reports/generate`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
+    signal,
+  });
+
+  if (!response.ok) {
+    const error = await response
+      .json()
+      .catch(() => ({ detail: "Unknown error" }));
+    throw new Error(error.detail || `API Error: ${response.status}`);
+  }
+
+  if (!response.body) {
+    throw new Error("Response body is null");
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+
+      let currentEvent: SSEEventType | null = null;
+
+      for (const line of lines) {
+        if (line.startsWith("event: ")) {
+          currentEvent = line.slice(7).trim() as SSEEventType;
+        } else if (line.startsWith("data: ") && currentEvent) {
+          try {
+            const data = JSON.parse(line.slice(6));
+
+            switch (currentEvent) {
+              case "message_start":
+                callbacks.onMessageStart?.(data);
+                break;
+              case "text_delta":
+                callbacks.onTextDelta?.(data);
+                break;
+              case "text_done":
+                callbacks.onTextDone?.(data);
+                break;
+              case "tool_call_start":
+                callbacks.onToolCallStart?.(data);
+                break;
+              case "tool_call_done":
+                callbacks.onToolCallDone?.(data);
+                break;
+              case "message_done":
+                callbacks.onMessageDone?.(data);
+                break;
+              case "error":
+                callbacks.onError?.(data);
+                break;
+            }
+          } catch (e) {
+            console.error("Failed to parse SSE data:", e);
+          }
+          currentEvent = null;
+        }
+      }
+    }
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      return;
+    }
+    callbacks.onConnectionError?.(error as Error);
+  }
+}
+
+/**
+ * レポート一覧を取得する
+ */
+export async function getReports(readingId: string): Promise<Report[]> {
+  return apiClient<Report[]>(`/api/readings/${readingId}/reports`);
+}
+
+/**
+ * 最新のレポートを取得する
+ */
+export async function getLatestReport(readingId: string): Promise<Report | null> {
+  return apiClient<Report | null>(`/api/readings/${readingId}/reports/latest`);
+}
+
+// --- Action Plan API ---
+
+/**
+ * アクションプラン一覧を取得する
+ */
+export async function getActionPlans(readingId: string): Promise<ActionPlan[]> {
+  return apiClient<ActionPlan[]>(`/api/readings/${readingId}/action-plans`);
+}
+
+/**
+ * アクションプランのステータスを更新する
+ */
+export async function updateActionPlan(
+  readingId: string,
+  planId: string,
+  data: ActionPlanUpdateInput
+): Promise<ActionPlan> {
+  return apiClient<ActionPlan>(
+    `/api/readings/${readingId}/action-plans/${planId}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }
+  );
 }
