@@ -179,17 +179,6 @@
 | `frontend/src/app/(main)/home/page.tsx` | FAB追加（既存ファイル修正） |
 | `frontend/src/app/(main)/settings/page.tsx` | FAB位置設定UI |
 
-### マインドマップ出力（オプション）
-
-思考の構造化・可視化機能。優先度は中程度。
-
-- [ ] 対話内容・Insightをマインドマップ形式で可視化
-- [ ] 技術選定: Mermaid.js / react-flow / カスタムSVG
-- [ ] 既存MoodChart（レーダーチャート）との統一感あるデザイン
-- [ ] 中心ノード: 書籍タイトル
-- [ ] 子ノード: Insightカテゴリ（learning, impression, question, connection）
-- [ ] 葉ノード: 個別のInsight内容
-
 ---
 
 ## Phase 2 タスク（未実装）
@@ -206,8 +195,6 @@
 
 ### AIエージェント
 
-- [ ] プロファイル抽出エージェント - 対話ログからユーザー属性・価値観を自動抽出しプロファイル更新
-  - コード内TODO: `backend/src/knowva/routers/sessions.py`
 - [ ] 推薦エージェント - プロファイルに基づく書籍推薦
   - コード内TODO: `backend/src/knowva/main.py`（推薦APIルーター追加）
 - [x] ルートオーケストレーター - 複数エージェントの統括（枠組み実装済み、ルーティングロジックは未実装）
@@ -220,7 +207,7 @@
 
 ### インフラ
 
-- [ ] 本番Firebase Auth設定（Googleログイン等追加）
+- [x] 本番Firebase Auth設定（Googleログイン等追加）
 
 ---
 

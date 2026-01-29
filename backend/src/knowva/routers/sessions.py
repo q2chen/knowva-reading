@@ -535,7 +535,6 @@ async def end_session(
 ):
     """セッションを終了する。"""
     # TODO(phase2): GCSへの完全ログ保存
-    # TODO(phase2): Profile Extraction Agent実行
     result = await firestore.end_session(user["uid"], reading_id, session_id)
     if not result:
         raise HTTPException(status_code=404, detail="Session not found")
