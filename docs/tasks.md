@@ -188,10 +188,13 @@
 
 ### データ保存
 
-- [ ] GCS生ログ保存 - セッション終了時に対話ログをGCSに永続保存する
-  - 保存先: `gs://bucket/users/{userId}/sessions/{readingId}/{sessionId}/full_log.json`
-  - コード内TODO: `backend/src/knowva/routers/sessions.py`
-- [ ] 生ログからのInsight再生成機能
+**廃止:** GCS生ログ保存機能は、Firestoreのmessagesコレクションで完全な対話履歴が保持されているため不要と判断。
+- Firestoreの`/sessions/{id}/messages`が事実上の生ログとして機能
+- `get_report_context()`で全メッセージを集約して再分析可能
+- スケール時のオプションとしてGCSエクスポート機能は将来検討
+
+~~- [ ] GCS生ログ保存~~
+~~- [ ] 生ログからのInsight再生成機能~~ → Firestoreベースで対応済み
 
 ### AIエージェント
 

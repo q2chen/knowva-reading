@@ -16,6 +16,5 @@ class SessionResponse(BaseModel):
     reading_id: str
     session_type: SessionType
     started_at: datetime
-    ended_at: Optional[datetime] = None
+    ended_at: Optional[datetime] = None  # 既存データの互換性のため残す
     summary: Optional[str] = None
-    # TODO(phase2): gcs_log_pathフィールド有効化

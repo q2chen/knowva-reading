@@ -102,8 +102,6 @@ async def send_message(
     session = await firestore.get_session(user["uid"], reading_id, session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
-    if session.get("ended_at"):
-        raise HTTPException(status_code=400, detail="Session has ended")
 
     # ユーザーメッセージをFirestoreに保存
     await firestore.save_message(
@@ -197,8 +195,6 @@ async def send_message_stream(
     session = await firestore.get_session(user["uid"], reading_id, session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
-    if session.get("ended_at"):
-        raise HTTPException(status_code=400, detail="Session has ended")
 
     # ユーザーメッセージをFirestoreに保存
     await firestore.save_message(
@@ -376,8 +372,6 @@ async def init_session(
     session = await firestore.get_session(user["uid"], reading_id, session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
-    if session.get("ended_at"):
-        raise HTTPException(status_code=400, detail="Session has ended")
 
     # 既にメッセージがあれば初期化しない（重複防止）
     existing_messages = await firestore.list_messages(user["uid"], reading_id, session_id)
@@ -527,15 +521,3 @@ async def init_session(
     )
 
 
-@router.post("/{reading_id}/sessions/{session_id}/end", response_model=SessionResponse)
-async def end_session(
-    reading_id: str,
-    session_id: str,
-    user: dict = Depends(get_current_user),
-):
-    """セッションを終了する。"""
-    # TODO(phase2): GCSへの完全ログ保存
-    result = await firestore.end_session(user["uid"], reading_id, session_id)
-    if not result:
-        raise HTTPException(status_code=404, detail="Session not found")
-    return result

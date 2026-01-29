@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Knowva（ノヴァ）は、AIによる読書体験支援アプリケーション。ユーザーが読んだ本の感想や学びを対話的に言語化し、読書傾向（プロファイル）を蓄積・可視化し、次に読むべき本を推薦する。
 
-**コアバリュー:** 読書体験を「時間とともに変化する思想の履歴」として長期保存する。完全な対話ログを不変データとして保存し、将来のAIモデルによる再解釈を可能にする。
+**コアバリュー:** 読書体験を「時間とともに変化する思想の履歴」として長期保存する。完全な対話履歴をFirestoreに保存し、将来のAIモデルによる再解釈を可能にする。
 
 ## プロジェクト状態
 
@@ -25,7 +25,8 @@ Knowva（ノヴァ）は、AIによる読書体験支援アプリケーション
 - データベース: Firestore
 - CI/CD: GitHub pushトリガーで自動デプロイ
 
-Phase 2の機能（GCS生ログ保存、プロファイル抽出エージェント、推薦エージェント、SSEストリーミング等）はコード内に`# TODO(phase2):` コメントで記録されている。
+Phase 2の機能（プロファイル抽出エージェント、推薦エージェント等）はコード内に`# TODO(phase2):` コメントで記録されている。
+※ GCS生ログ保存は廃止（Firestoreのmessagesコレクションで対応）。SSEストリーミングは実装済み。
 
 ## ローカル開発環境の起動
 
@@ -101,13 +102,16 @@ npm run lint     # lint
 ### 三層構成
 
 1. **実行基盤（ADK + Cloud Run）** - 会話実行・ツール実行・セッション管理（ADK + Gemini API）
-2. **長期保存層（本丸）** - 二層データ戦略（下記参照）
+2. **長期保存層（本丸）** - Firestoreによる統合管理（対話履歴 + 構造化データ）
 3. **検索基盤** - ベクトル検索・全文検索（Phase 2以降）
 
-### データ保存の二層化戦略
+### データ保存戦略
 
-- **生ログ層（Google Cloud Storage）:** 対話の完全ログをJSON形式で永続保存。不変・削除なし。将来のAIモデルでの再分析に対応。
-- **解釈層（Firestore）:** 構造化された読書記録、AI抽出の気づき、ユーザープロファイル、検索索引。生ログから再生成可能なキャッシュとして位置づけ。
+Firestoreによる統合管理:
+- **対話履歴（messagesコレクション）:** 完全な対話ログを保持。`get_report_context()`で全メッセージを集約して再分析可能。
+- **構造化データ:** 読書記録、AI抽出のInsight、ユーザープロファイル、検索索引。
+
+※ 当初計画していたGCS生ログ保存は、Firestoreで対応可能なため廃止。スケール時のオプションとして将来検討。
 
 ### Firestoreコレクション構造
 
@@ -123,18 +127,11 @@ npm run lint     # lint
   └── /recommendations/{recommendationId}
 ```
 
-### GCSパス構造
-
-```
-/users/{userId}/sessions/{readingId}/{sessionId}/full_log.json
-/users/{userId}/profile_snapshots/{historyId}.json
-```
-
 ## 技術スタック
 
 - **Agent Framework:** Agent Development Kit (ADK) + google-genai SDK
 - **LLM:** Gemini（現在 `gemini-3-flash-preview`）
-- **ストレージ:** Firestore（構造化データ）。GCS生ログ保存はPhase 2
+- **ストレージ:** Firestore（対話履歴 + 構造化データを統合管理）
 - **フロントエンド:** Next.js 16 (App Router) + TypeScript + Tailwind CSS 4
 - **バックエンド:** Python 3.12+ (FastAPI) + uv
 - **認証:** Firebase Auth（メール/パスワード）

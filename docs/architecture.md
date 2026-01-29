@@ -22,17 +22,18 @@ Knowvaは**長期保存を本丸**として、以下の3層構成で設計しま
 - **責務:** ユーザーとの対話を「聞き上手」に進行させる
 
 #### 2) 長期保存層（**本丸**）
-以下の二層で、数年後の振り返りを可能にします：
+Firestoreによる統合管理で、数年後の振り返りを可能にします：
 
-**a) Google Cloud Storage（生ログ層）- Phase 2**
-- **保存内容:** 会話全文のJSON/テキストログ
-- **目的:** 完全な記録の永続化（不変・削除なし）
-- **将来性:** 新しいAIモデルでの再分析に備える
+**Firestore（実装済み）**
+- **保存内容:**
+  - 完全な対話履歴（`/sessions/{id}/messages`）
+  - 構造化された読み返し用データ（要約、Insight、索引）
+- **目的:** パフォーマンスの高いクエリと表示、長期保存
+- **備考:** `messages`コレクションが事実上の「生ログ」として機能。将来のAIモデルでの再分析も可能（`get_report_context()`で全メッセージを集約して活用済み）
 
-**b) Firestore（解釈層）- 実装済み**
-- **保存内容:** 読み返し用の「要約」「メモ」「索引」
-- **目的:** パフォーマンスの高いクエリと表示
-- **位置づけ:** 生ログから再生成可能なキャッシュ
+**Google Cloud Storage（オプション・将来検討）**
+- スケール時やコンプライアンス要件がある場合に検討
+- 現時点では未実装（Firestoreで十分対応可能）
 
 #### 3) 検索基盤（Phase 2以降）
 - **ベクトル検索:** 曖昧検索を強くしたくなったら追加
@@ -40,33 +41,43 @@ Knowvaは**長期保存を本丸**として、以下の3層構成で設計しま
 
 ---
 
-## データ保存の二層化戦略（詳細）
+## データ保存戦略（詳細）
 
-Knowvaは、将来的なAIモデルの進化やマルチモーダルなアート化（Rhizomatiks的な展開）を見据え、**データを「生ログ層」と「解釈層」の二層で管理する**アーキテクチャを採用します。
+Knowvaは、将来的なAIモデルの進化やマルチモーダルなアート化を見据え、**Firestoreで対話履歴と構造化データを統合管理**するアーキテクチャを採用します。
 
-### 生ログ層（Raw Data Layer）= Google Cloud Storage【Phase 2】
-- **目的:** すべての対話・入力データを「その時点の生の記録」として永続化
-- **保存先:** Google Cloud Storage (GCS)
+### Firestore による統合管理【実装済み】
+
+**対話履歴（事実上の生ログ）**
+- **保存先:** `/users/{userId}/readings/{readingId}/sessions/{sessionId}/messages/{messageId}`
 - **保存内容:**
-  - 対話の完全なJSON/テキストログ（会話全文）
-  - ユーザー入力の生データ（タイムスタンプ付き）
+  - `role`: "user" | "assistant"
+  - `message`: メッセージ本文
+  - `input_type`: "text" | "voice"
+  - `created_at`: タイムスタンプ
 - **特徴:**
-  - **不変性:** 一度保存したら削除・編集しない
-  - **再解釈可能性:** 将来的に新しいAIモデルで再分析できる
-  - **数年後の振り返り:** 完全な会話履歴をいつでも読み返せる
+  - 完全な対話履歴を保持（削除なし）
+  - `get_report_context()`で全メッセージを集約して再分析可能
+  - 将来のAIモデルでの再解釈に対応
 
-### 解釈層（Interpretation Layer）= Firestore【実装済み】
-- **目的:** アプリケーションが利用する「その時点でのAIの解釈」を保存
-- **保存先:** Firestore
+**構造化データ（解釈層）**
 - **保存内容:**
-  - 構造化された読書記録
-  - AIが抽出した学び・気づき（要約）
+  - 読書記録、AIが抽出した気づき（Insight）
   - 検索用の索引・メタデータ
   - ユーザープロファイル
 - **特徴:**
-  - **可変性:** AIモデルの進化に応じて再解釈・上書き可能
-  - **パフォーマンス重視:** クエリ最適化された構造
-  - **読み返し用:** UIで高速に表示するための最適化
+  - AIモデルの進化に応じて再生成可能
+  - クエリ最適化された構造
+  - UIで高速に表示
+
+### GCS生ログ層について（オプション・将来検討）
+
+当初はGCSへの生ログ保存を計画していましたが、以下の理由でFirestoreによる統合管理を採用：
+
+1. **Firestoreのmessagesコレクションで完全な対話履歴が既に保存されている**
+2. **`get_report_context()`で対話履歴からの再分析が既に実現されている**
+3. **追加の実装・運用コストに見合う価値が現時点では低い**
+
+スケール時（大量ユーザー）やコンプライアンス要件（長期アーカイブ）が発生した場合は、GCSへのエクスポート機能を追加検討
 
 ---
 
@@ -147,21 +158,6 @@ Insightの`visibility`を変更すると：
 - `private`: `/publicInsights`から削除
 
 ---
-
-## 生ログ層のストレージ構造（Google Cloud Storage）【Phase 2】
-
-```
-/users/{userId}/
-  ├── sessions/
-  │   ├── {readingId}/
-  │   │   ├── {sessionId}/
-  │   │   │   ├── full_log.json       # 対話の完全ログ
-  │   │   │   └── metadata.json       # セッションメタデータ
-  │   │   └── ...
-  ├── profile_snapshots/
-  │   ├── {historyId}.json            # プロファイル変更時のスナップショット
-  │   └── ...
-```
 
 ---
 
@@ -249,7 +245,6 @@ Insightの`visibility`を変更すると：
 | POST | `/api/readings/{readingId}/sessions/{sessionId}/messages` | メッセージ送信（非ストリーミング） | 実装済み |
 | POST | `/api/readings/{readingId}/sessions/{sessionId}/messages/stream` | メッセージ送信（SSEストリーミング） | 実装済み |
 | GET | `/api/readings/{readingId}/sessions/{sessionId}/messages` | メッセージ履歴取得 | 実装済み |
-| POST | `/api/readings/{readingId}/sessions/{sessionId}/end` | セッション終了 | 実装済み |
 
 #### 心境記録
 
@@ -390,8 +385,8 @@ User → POST /api/.../sessions/{id}/init → FastAPI
 - **セッション管理:** FirestoreSessionService
 
 ### 2) 長期保存層（本丸）
-- **a) Google Cloud Storage（生ログ層）:** Phase 2
-- **b) Firestore（解釈層）:** 実装済み
+- **Firestore:** 対話履歴（messagesコレクション）+ 構造化データ（Insight、プロファイル等）を統合管理
+- **GCS:** オプション（スケール時に検討）
 
 ### 3) 検索基盤
 - ベクトル検索: Phase 2
@@ -455,5 +450,5 @@ User → POST /api/.../sessions/{id}/init → FastAPI
 - **Firebase Project ID:** `knowva-reading`
 
 #### Phase 2以降
-- **GCS:** 生ログ保存
-- 非同期処理: Cloud Functions
+- 非同期処理: Cloud Functions（必要に応じて）
+- GCSエクスポート: スケール時のオプション

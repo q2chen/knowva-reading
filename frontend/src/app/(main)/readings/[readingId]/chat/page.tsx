@@ -6,7 +6,6 @@ import Link from "next/link";
 import { apiClient } from "@/lib/api";
 import { Reading, Session, ReadingStatus } from "@/lib/types";
 import { ChatInterface } from "@/components/chat/ChatInterface";
-import { ChatHistory } from "@/components/chat/ChatHistory";
 import { ToastContainer, useToast } from "@/components/ui/Toast";
 import { StatusUpdateResult } from "@/hooks/useStreamingChat";
 
@@ -44,7 +43,7 @@ export default function ChatPage() {
           apiClient<Session[]>(`/api/readings/${readingId}/sessions`),
         ]);
         setReading(readingData);
-        
+
         // 現在のセッションを取得
         const currentSession = sessionsData.find((s) => s.id === sessionId);
         setSession(currentSession || null);
@@ -56,21 +55,6 @@ export default function ChatPage() {
     }
     fetchData();
   }, [readingId, sessionId, router]);
-
-  const handleEndSession = async () => {
-    if (!confirm("このセッションを終了しますか？")) return;
-    try {
-      await apiClient(`/api/readings/${readingId}/sessions/${sessionId}/end`, {
-        method: "POST",
-      });
-      router.push(`/readings/${readingId}`);
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "エラーが発生しました");
-    }
-  };
-
-  // セッションが終了しているかどうか
-  const isSessionEnded = session?.ended_at != null;
 
   // ステータスラベル（readingのステータスを優先、なければセッションタイプから推測）
   const currentStatusLabel = reading
@@ -119,30 +103,16 @@ export default function ChatPage() {
           {(reading || session) && (
             <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
               {currentStatusLabel}
-              {isSessionEnded && " (終了)"}
             </span>
           )}
         </div>
-        {!isSessionEnded && (
-          <button
-            onClick={handleEndSession}
-            className="px-3 py-1 text-sm border border-gray-300 text-gray-600 rounded-md hover:bg-gray-50"
-          >
-            セッション終了
-          </button>
-        )}
       </div>
-      
-      {/* 終了セッションは履歴表示、アクティブセッションはチャットUI */}
-      {isSessionEnded ? (
-        <ChatHistory readingId={readingId} sessionId={sessionId} />
-      ) : (
-        <ChatInterface
-          readingId={readingId}
-          sessionId={sessionId}
-          onStatusUpdate={handleStatusUpdate}
-        />
-      )}
+
+      <ChatInterface
+        readingId={readingId}
+        sessionId={sessionId}
+        onStatusUpdate={handleStatusUpdate}
+      />
     </div>
   );
 }
