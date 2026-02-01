@@ -16,7 +16,11 @@ from knowva.agents import report_agent
 from knowva.config import settings
 from knowva.middleware.firebase_auth import get_current_user
 from knowva.middleware.rate_limit import limiter
-from knowva.models.action_plan import ActionPlanResponse, ActionPlanUpdate
+from knowva.models.action_plan import (
+    ActionPlanCreateManual,
+    ActionPlanResponse,
+    ActionPlanUpdateFull,
+)
 from knowva.models.report import ReportResponse
 from knowva.services import firestore
 from knowva.services.session_service import get_session_service
@@ -232,21 +236,40 @@ async def list_action_plans(
     return await firestore.list_action_plans(user["uid"], reading_id)
 
 
+@router.post("/{reading_id}/action-plans", response_model=ActionPlanResponse)
+async def create_action_plan(
+    reading_id: str,
+    body: ActionPlanCreateManual,
+    user: dict = Depends(get_current_user),
+):
+    """アクションプランを手動で作成する。"""
+    reading = await firestore.get_reading(user["uid"], reading_id)
+    if not reading:
+        raise HTTPException(status_code=404, detail="Reading not found")
+
+    result = await firestore.create_action_plan_manual(
+        user["uid"],
+        reading_id,
+        body.model_dump(),
+    )
+    return result
+
+
 @router.patch(
     "/{reading_id}/action-plans/{plan_id}", response_model=ActionPlanResponse
 )
 async def update_action_plan(
     reading_id: str,
     plan_id: str,
-    body: ActionPlanUpdate,
+    body: ActionPlanUpdateFull,
     user: dict = Depends(get_current_user),
 ):
-    """アクションプランのステータスを更新する。"""
+    """アクションプランを更新する。"""
     reading = await firestore.get_reading(user["uid"], reading_id)
     if not reading:
         raise HTTPException(status_code=404, detail="Reading not found")
 
-    result = await firestore.update_action_plan(
+    result = await firestore.update_action_plan_full(
         user["uid"],
         reading_id,
         plan_id,
@@ -255,3 +278,24 @@ async def update_action_plan(
     if not result:
         raise HTTPException(status_code=404, detail="Action plan not found")
     return result
+
+
+@router.delete("/{reading_id}/action-plans/{plan_id}")
+async def delete_action_plan(
+    reading_id: str,
+    plan_id: str,
+    user: dict = Depends(get_current_user),
+):
+    """アクションプランを削除する。"""
+    reading = await firestore.get_reading(user["uid"], reading_id)
+    if not reading:
+        raise HTTPException(status_code=404, detail="Reading not found")
+
+    deleted = await firestore.delete_action_plan(
+        user["uid"],
+        reading_id,
+        plan_id,
+    )
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Action plan not found")
+    return {"deleted": True}

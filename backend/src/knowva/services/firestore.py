@@ -84,6 +84,116 @@ async def update_reading(user_id: str, reading_id: str, data: dict) -> Optional[
     return {"id": updated_doc.id, **updated_doc.to_dict()}
 
 
+async def get_reading_related_counts(user_id: str, reading_id: str) -> dict:
+    """読書記録に関連するデータの件数を取得する（削除確認用）。"""
+    db: AsyncClient = get_firestore_client()
+    base_path = (
+        db.collection("users")
+        .document(user_id)
+        .collection("readings")
+        .document(reading_id)
+    )
+
+    # 各サブコレクションの件数をカウント
+    sessions_count = 0
+    messages_count = 0
+    insights_count = 0
+    moods_count = 0
+    reports_count = 0
+    action_plans_count = 0
+
+    # セッションとメッセージ
+    async for session_doc in base_path.collection("sessions").stream():
+        sessions_count += 1
+        async for _ in session_doc.reference.collection("messages").stream():
+            messages_count += 1
+
+    # Insights
+    async for _ in base_path.collection("insights").stream():
+        insights_count += 1
+
+    # Moods
+    async for _ in base_path.collection("moods").stream():
+        moods_count += 1
+
+    # Reports
+    async for _ in base_path.collection("reports").stream():
+        reports_count += 1
+
+    # Action Plans
+    async for _ in base_path.collection("actionPlans").stream():
+        action_plans_count += 1
+
+    return {
+        "sessions_count": sessions_count,
+        "messages_count": messages_count,
+        "insights_count": insights_count,
+        "moods_count": moods_count,
+        "reports_count": reports_count,
+        "action_plans_count": action_plans_count,
+    }
+
+
+async def delete_reading_cascade(user_id: str, reading_id: str) -> dict:
+    """読書記録と関連する全データを削除する。"""
+    db: AsyncClient = get_firestore_client()
+    base_path = (
+        db.collection("users")
+        .document(user_id)
+        .collection("readings")
+        .document(reading_id)
+    )
+
+    # 読書記録が存在するか確認
+    reading_doc = await base_path.get()
+    if not reading_doc.exists:
+        return {"deleted": False, "error": "Reading not found"}
+
+    counts = {
+        "sessions": 0,
+        "messages": 0,
+        "insights": 0,
+        "moods": 0,
+        "reports": 0,
+        "action_plans": 0,
+    }
+
+    # セッションとメッセージを削除
+    async for session_doc in base_path.collection("sessions").stream():
+        async for msg_doc in session_doc.reference.collection("messages").stream():
+            await msg_doc.reference.delete()
+            counts["messages"] += 1
+        await session_doc.reference.delete()
+        counts["sessions"] += 1
+
+    # Insightsを削除（publicInsightsも連動削除）
+    async for insight_doc in base_path.collection("insights").stream():
+        insight_id = insight_doc.id
+        await insight_doc.reference.delete()
+        await delete_public_insight(insight_id)
+        counts["insights"] += 1
+
+    # Moodsを削除
+    async for mood_doc in base_path.collection("moods").stream():
+        await mood_doc.reference.delete()
+        counts["moods"] += 1
+
+    # Reportsを削除
+    async for report_doc in base_path.collection("reports").stream():
+        await report_doc.reference.delete()
+        counts["reports"] += 1
+
+    # Action Plansを削除
+    async for plan_doc in base_path.collection("actionPlans").stream():
+        await plan_doc.reference.delete()
+        counts["action_plans"] += 1
+
+    # 最後に読書記録本体を削除
+    await base_path.delete()
+
+    return {"deleted": True, "counts": counts}
+
+
 # --- Sessions ---
 
 
@@ -215,6 +325,128 @@ async def list_insights(user_id: str, reading_id: str) -> list[dict]:
     async for doc in docs.stream():
         results.append({"id": doc.id, **doc.to_dict()})
     return results
+
+
+async def update_insight(
+    user_id: str, reading_id: str, insight_id: str, data: dict
+) -> Optional[dict]:
+    """Insightの内容やタイプを更新する。"""
+    db: AsyncClient = get_firestore_client()
+    doc_ref = (
+        db.collection("users")
+        .document(user_id)
+        .collection("readings")
+        .document(reading_id)
+        .collection("insights")
+        .document(insight_id)
+    )
+    doc = await doc_ref.get()
+    if not doc.exists:
+        return None
+
+    update_data = {k: v for k, v in data.items() if v is not None}
+    update_data["updated_at"] = _now()
+
+    await doc_ref.update(update_data)
+    updated = await doc_ref.get()
+    return {"id": updated.id, **updated.to_dict()}
+
+
+async def delete_insights(
+    user_id: str, reading_id: str, insight_ids: list[str]
+) -> dict:
+    """複数のInsightを削除する。関連するpublicInsightsも削除。"""
+    db: AsyncClient = get_firestore_client()
+    deleted_count = 0
+
+    for insight_id in insight_ids:
+        doc_ref = (
+            db.collection("users")
+            .document(user_id)
+            .collection("readings")
+            .document(reading_id)
+            .collection("insights")
+            .document(insight_id)
+        )
+        doc = await doc_ref.get()
+        if doc.exists:
+            await doc_ref.delete()
+            # 関連するpublicInsightも削除
+            await delete_public_insight(insight_id)
+            deleted_count += 1
+
+    return {"deleted_count": deleted_count}
+
+
+async def merge_insights(
+    user_id: str,
+    reading_id: str,
+    merged_content: str,
+    merged_type: str,
+    source_insight_ids: list[str],
+) -> dict:
+    """複数のInsightを1つにマージする。
+
+    元のInsightを削除し、新しいマージ済みInsightを作成する。
+    """
+    db: AsyncClient = get_firestore_client()
+
+    # 元のInsightを取得して情報を保持
+    original_insights = []
+    for insight_id in source_insight_ids:
+        insight = await get_insight(user_id, reading_id, insight_id)
+        if insight:
+            original_insights.append(insight)
+            # 関連するpublicInsightも削除
+            await delete_public_insight(insight_id)
+
+    if not original_insights:
+        return {"status": "error", "error": "No insights found"}
+
+    # 最も古いcreated_atを持つInsightのreading_statusを使用
+    oldest_insight = min(original_insights, key=lambda x: x.get("created_at", ""))
+    reading_status = oldest_insight.get("reading_status")
+
+    # 元のInsightを削除
+    for insight_id in source_insight_ids:
+        doc_ref = (
+            db.collection("users")
+            .document(user_id)
+            .collection("readings")
+            .document(reading_id)
+            .collection("insights")
+            .document(insight_id)
+        )
+        doc = await doc_ref.get()
+        if doc.exists:
+            await doc_ref.delete()
+
+    # 新しいマージ済みInsightを作成
+    now = _now()
+    doc_ref = (
+        db.collection("users")
+        .document(user_id)
+        .collection("readings")
+        .document(reading_id)
+        .collection("insights")
+        .document()
+    )
+    doc_data = {
+        "content": merged_content,
+        "type": merged_type,
+        "reading_status": reading_status,
+        "merged_from": [
+            {
+                "insight_id": i["id"],
+                "original_content": i.get("content"),
+            }
+            for i in original_insights
+        ],
+        "is_merged": True,
+        "created_at": now,
+    }
+    await doc_ref.set(doc_data)
+    return {"id": doc_ref.id, **doc_data}
 
 
 # --- User Profile ---
@@ -1054,6 +1286,84 @@ async def update_action_plan(
     await doc_ref.update(update_data)
     updated = await doc_ref.get()
     return {"id": updated.id, **updated.to_dict()}
+
+
+async def create_action_plan_manual(
+    user_id: str, reading_id: str, data: dict
+) -> dict:
+    """ユーザーが手動でアクションプランを作成する。"""
+    db: AsyncClient = get_firestore_client()
+    doc_ref = (
+        db.collection("users")
+        .document(user_id)
+        .collection("readings")
+        .document(reading_id)
+        .collection("actionPlans")
+        .document()
+    )
+    now = _now()
+    doc_data = {
+        "action": data["action"],
+        "relevance": data.get("relevance") or "",
+        "difficulty": data.get("difficulty", "medium"),
+        "timeframe": data.get("timeframe") or "",
+        "source_insight_id": None,
+        "reading_id": reading_id,
+        "status": "pending",
+        "completed_at": None,
+        "created_at": now,
+        "updated_at": now,
+    }
+    await doc_ref.set(doc_data)
+    return {"id": doc_ref.id, **doc_data}
+
+
+async def update_action_plan_full(
+    user_id: str, reading_id: str, plan_id: str, data: dict
+) -> Optional[dict]:
+    """アクションプランの全フィールドを更新する。"""
+    db: AsyncClient = get_firestore_client()
+    doc_ref = (
+        db.collection("users")
+        .document(user_id)
+        .collection("readings")
+        .document(reading_id)
+        .collection("actionPlans")
+        .document(plan_id)
+    )
+    doc = await doc_ref.get()
+    if not doc.exists:
+        return None
+
+    update_data = {k: v for k, v in data.items() if v is not None}
+    update_data["updated_at"] = _now()
+
+    # completedに変更された場合はcompleted_atを設定
+    if update_data.get("status") == "completed":
+        update_data["completed_at"] = _now()
+
+    await doc_ref.update(update_data)
+    updated = await doc_ref.get()
+    return {"id": updated.id, **updated.to_dict()}
+
+
+async def delete_action_plan(user_id: str, reading_id: str, plan_id: str) -> bool:
+    """アクションプランを削除する。"""
+    db: AsyncClient = get_firestore_client()
+    doc_ref = (
+        db.collection("users")
+        .document(user_id)
+        .collection("readings")
+        .document(reading_id)
+        .collection("actionPlans")
+        .document(plan_id)
+    )
+    doc = await doc_ref.get()
+    if not doc.exists:
+        return False
+
+    await doc_ref.delete()
+    return True
 
 
 # --- Report Context (レポート生成用コンテキスト) ---

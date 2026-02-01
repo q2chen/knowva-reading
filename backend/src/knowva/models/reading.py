@@ -31,6 +31,25 @@ class ReadingUpdate(BaseModel):
     status: Optional[Literal["not_started", "reading", "completed"]] = None
     reading_context: Optional[ReadingContext] = None
     latest_summary: Optional[str] = None
+    book: Optional[BookEmbed] = None  # 本のタイトル・著者の編集用
+
+
+class ReadingDeleteConfirmation(BaseModel):
+    """削除確認用の関連データ件数"""
+
+    sessions_count: int
+    messages_count: int
+    insights_count: int
+    moods_count: int
+    reports_count: int
+    action_plans_count: int
+
+
+class ReadingDeleteResponse(BaseModel):
+    """削除レスポンス"""
+
+    deleted: bool
+    counts: ReadingDeleteConfirmation
 
 
 class ReadingResponse(BaseModel):

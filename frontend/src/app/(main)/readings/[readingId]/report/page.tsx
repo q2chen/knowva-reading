@@ -8,10 +8,21 @@ import {
   generateReportStream,
   getLatestReport,
   getActionPlans,
+  createActionPlan,
+  updateActionPlan,
+  deleteActionPlan,
 } from "@/lib/api";
-import type { Reading, Report, ActionPlan } from "@/lib/types";
+import type {
+  Reading,
+  Report,
+  ActionPlan,
+  ActionPlanCreateInput,
+  ActionPlanUpdateInput,
+} from "@/lib/types";
 import { ReportView } from "@/components/report/ReportView";
 import { ActionPlanList } from "@/components/action-plan/ActionPlanList";
+import { ActionPlanEditForm } from "@/components/action-plan/ActionPlanEditForm";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 export default function ReportPage() {
   const params = useParams();
@@ -25,6 +36,11 @@ export default function ReportPage() {
   const [generating, setGenerating] = useState(false);
   const [generatingText, setGeneratingText] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  // アクションプラン編集・削除の状態
+  const [isAddingPlan, setIsAddingPlan] = useState(false);
+  const [editingPlan, setEditingPlan] = useState<ActionPlan | null>(null);
+  const [deletingPlan, setDeletingPlan] = useState<ActionPlan | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -81,6 +97,43 @@ export default function ReportPage() {
     setActionPlans((prev) =>
       prev.map((p) => (p.id === updated.id ? updated : p))
     );
+  };
+
+  // アクションプラン追加
+  const handleAddPlan = async (data: ActionPlanCreateInput) => {
+    try {
+      const created = await createActionPlan(readingId, data);
+      setActionPlans((prev) => [...prev, created]);
+      setIsAddingPlan(false);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "追加に失敗しました");
+    }
+  };
+
+  // アクションプラン編集
+  const handleUpdatePlan = async (data: ActionPlanUpdateInput) => {
+    if (!editingPlan) return;
+    try {
+      const updated = await updateActionPlan(readingId, editingPlan.id, data);
+      setActionPlans((prev) =>
+        prev.map((p) => (p.id === updated.id ? updated : p))
+      );
+      setEditingPlan(null);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "更新に失敗しました");
+    }
+  };
+
+  // アクションプラン削除
+  const handleDeletePlan = async () => {
+    if (!deletingPlan) return;
+    try {
+      await deleteActionPlan(readingId, deletingPlan.id);
+      setActionPlans((prev) => prev.filter((p) => p.id !== deletingPlan.id));
+      setDeletingPlan(null);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "削除に失敗しました");
+    }
   };
 
   if (loading || !reading) {
@@ -146,17 +199,84 @@ export default function ReportPage() {
         </div>
       )}
 
-      {/* アクションプラン */}
+      {/* おすすめのアクションプラン */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
-          アクションプラン
-        </h2>
-        <ActionPlanList
-          readingId={readingId}
-          actionPlans={actionPlans}
-          onUpdate={handleActionPlanUpdate}
-        />
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-lg font-semibold text-gray-900">
+            おすすめのアクションプラン
+            {actionPlans.length > 0 && (
+              <span className="ml-2 text-sm font-normal text-gray-500">
+                ({actionPlans.filter((p) => p.status === "completed").length}/
+                {actionPlans.length} 完了)
+              </span>
+            )}
+          </h2>
+          {actionPlans.length > 0 && !isAddingPlan && !editingPlan && (
+            <button
+              onClick={() => setIsAddingPlan(true)}
+              className="px-3 py-1 text-sm text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+            >
+              + 追加
+            </button>
+          )}
+        </div>
+        <p className="text-sm text-gray-500 mb-4">
+          AIから提案されたアクションプランのアイデアです。好みに合わせて自由に編集しましょう。
+        </p>
+
+        {/* 追加フォーム */}
+        {isAddingPlan && (
+          <div className="mb-4">
+            <ActionPlanEditForm
+              onSave={handleAddPlan}
+              onCancel={() => setIsAddingPlan(false)}
+            />
+          </div>
+        )}
+
+        {/* 編集フォーム */}
+        {editingPlan && (
+          <div className="mb-4">
+            <ActionPlanEditForm
+              plan={editingPlan}
+              onSave={handleUpdatePlan}
+              onCancel={() => setEditingPlan(null)}
+            />
+          </div>
+        )}
+
+        {/* リスト */}
+        {!editingPlan && (
+          <ActionPlanList
+            readingId={readingId}
+            actionPlans={actionPlans}
+            onUpdate={handleActionPlanUpdate}
+            onAdd={() => setIsAddingPlan(true)}
+            onEdit={(plan) => setEditingPlan(plan)}
+            onDelete={(plan) => setDeletingPlan(plan)}
+          />
+        )}
       </div>
+
+      {/* アクションプラン削除確認ダイアログ */}
+      <ConfirmDialog
+        isOpen={!!deletingPlan}
+        title="アクションプランを削除しますか？"
+        message={
+          deletingPlan && (
+            <p>
+              「{deletingPlan.action}」を削除します。
+              <br />
+              この操作は取り消せません。
+            </p>
+          )
+        }
+        confirmLabel="削除する"
+        cancelLabel="キャンセル"
+        variant="danger"
+        onConfirm={handleDeletePlan}
+        onCancel={() => setDeletingPlan(null)}
+      />
     </div>
   );
 }

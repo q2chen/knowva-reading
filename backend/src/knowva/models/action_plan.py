@@ -29,6 +29,25 @@ class ActionPlanUpdate(BaseModel):
     status: Optional[ActionPlanStatus] = Field(default=None, description="ステータス")
 
 
+class ActionPlanCreateManual(BaseModel):
+    """ユーザー手動作成用リクエスト。"""
+
+    action: str = Field(description="具体的なアクション内容")
+    relevance: Optional[str] = Field(default=None, description="自分との関連性")
+    difficulty: ActionPlanDifficulty = Field(default="medium", description="難易度")
+    timeframe: Optional[str] = Field(default=None, description="実行目安期間")
+
+
+class ActionPlanUpdateFull(BaseModel):
+    """アクションプランのフル更新リクエスト。"""
+
+    action: Optional[str] = Field(default=None, description="具体的なアクション内容")
+    relevance: Optional[str] = Field(default=None, description="自分との関連性")
+    difficulty: Optional[ActionPlanDifficulty] = Field(default=None, description="難易度")
+    timeframe: Optional[str] = Field(default=None, description="実行目安期間")
+    status: Optional[ActionPlanStatus] = Field(default=None, description="ステータス")
+
+
 class ActionPlanResponse(BaseModel):
     """アクションプランのレスポンス。"""
 

@@ -54,3 +54,57 @@ class TimelineResponse(BaseModel):
     insights: list[PublicInsightResponse]
     next_cursor: Optional[str] = None
     has_more: bool = False
+
+
+# --- Insight CRUD用モデル ---
+
+
+InsightType = Literal["learning", "impression", "question", "connection"]
+
+
+class InsightCreate(BaseModel):
+    """Insight手動作成リクエスト"""
+
+    content: str
+    type: InsightType = "learning"
+
+
+class InsightUpdate(BaseModel):
+    """Insight更新リクエスト"""
+
+    content: Optional[str] = None
+    type: Optional[InsightType] = None
+
+
+class InsightDeleteRequest(BaseModel):
+    """複数Insight削除リクエスト"""
+
+    insight_ids: list[str]
+
+
+class InsightDeleteResponse(BaseModel):
+    """Insight削除レスポンス"""
+
+    deleted_count: int
+
+
+class InsightMergeRequest(BaseModel):
+    """Insightマージプレビューリクエスト"""
+
+    insight_ids: list[str]
+
+
+class InsightMergePreviewResponse(BaseModel):
+    """Insightマージプレビューレスポンス（LLM生成結果）"""
+
+    merged_content: str
+    suggested_type: InsightType
+    original_insights: list[InsightResponse]
+
+
+class InsightMergeConfirmRequest(BaseModel):
+    """Insightマージ確定リクエスト"""
+
+    insight_ids: list[str]
+    merged_content: str
+    type: InsightType
