@@ -24,6 +24,7 @@ import type {
   BookCreateInput,
   Report,
   ActionPlan,
+  ActionPlanCreateInput,
   ActionPlanUpdateInput,
   OnboardingStatus,
   OnboardingSubmit,
@@ -31,6 +32,16 @@ import type {
   BadgeDefinition,
   UserBadge,
   BadgeCheckResponse,
+  Reading,
+  ReadingUpdateInput,
+  ReadingDeleteConfirmation,
+  ReadingDeleteResponse,
+  Insight,
+  InsightCreateInput,
+  InsightUpdateInput,
+  InsightDeleteResponse,
+  InsightMergePreviewResponse,
+  InsightMergeConfirmInput,
 } from "./types";
 
 // Next.js rewrites経由で同一オリジンからAPIにアクセス（CORSを回避）
@@ -554,7 +565,20 @@ export async function getActionPlans(readingId: string): Promise<ActionPlan[]> {
 }
 
 /**
- * アクションプランのステータスを更新する
+ * アクションプランを手動で作成する
+ */
+export async function createActionPlan(
+  readingId: string,
+  data: ActionPlanCreateInput
+): Promise<ActionPlan> {
+  return apiClient<ActionPlan>(`/api/readings/${readingId}/action-plans`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * アクションプランを更新する
  */
 export async function updateActionPlan(
   readingId: string,
@@ -568,6 +592,18 @@ export async function updateActionPlan(
       body: JSON.stringify(data),
     }
   );
+}
+
+/**
+ * アクションプランを削除する
+ */
+export async function deleteActionPlan(
+  readingId: string,
+  planId: string
+): Promise<void> {
+  await apiClient(`/api/readings/${readingId}/action-plans/${planId}`, {
+    method: "DELETE",
+  });
 }
 
 // --- オンボーディングAPI ---
@@ -613,5 +649,116 @@ export async function getUserBadges(): Promise<UserBadge[]> {
 export async function checkAndAwardBadges(): Promise<BadgeCheckResponse> {
   return apiClient<BadgeCheckResponse>("/api/badges/check", {
     method: "POST",
+  });
+}
+
+// --- Reading CRUD API ---
+
+/**
+ * 読書記録を更新する
+ */
+export async function updateReading(
+  readingId: string,
+  data: ReadingUpdateInput
+): Promise<Reading> {
+  return apiClient<Reading>(`/api/readings/${readingId}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * 読書記録削除前のプレビュー（関連データ件数取得）
+ */
+export async function previewReadingDelete(
+  readingId: string
+): Promise<ReadingDeleteConfirmation> {
+  return apiClient<ReadingDeleteConfirmation>(
+    `/api/readings/${readingId}/delete-preview`
+  );
+}
+
+/**
+ * 読書記録を削除する（関連データすべて含む）
+ */
+export async function deleteReading(
+  readingId: string
+): Promise<ReadingDeleteResponse> {
+  return apiClient<ReadingDeleteResponse>(`/api/readings/${readingId}`, {
+    method: "DELETE",
+  });
+}
+
+// --- Insight CRUD API ---
+
+/**
+ * 気づきを手動で作成する
+ */
+export async function createInsight(
+  readingId: string,
+  data: InsightCreateInput
+): Promise<Insight> {
+  return apiClient<Insight>(`/api/readings/${readingId}/insights`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * Insightを更新する
+ */
+export async function updateInsight(
+  readingId: string,
+  insightId: string,
+  data: InsightUpdateInput
+): Promise<Insight> {
+  return apiClient<Insight>(`/api/readings/${readingId}/insights/${insightId}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * 複数のInsightを削除する
+ */
+export async function deleteInsights(
+  readingId: string,
+  insightIds: string[]
+): Promise<InsightDeleteResponse> {
+  return apiClient<InsightDeleteResponse>(
+    `/api/readings/${readingId}/insights/delete`,
+    {
+      method: "POST",
+      body: JSON.stringify({ insight_ids: insightIds }),
+    }
+  );
+}
+
+/**
+ * Insightマージのプレビュー（LLM生成）
+ */
+export async function previewInsightMerge(
+  readingId: string,
+  insightIds: string[]
+): Promise<InsightMergePreviewResponse> {
+  return apiClient<InsightMergePreviewResponse>(
+    `/api/readings/${readingId}/insights/merge/preview`,
+    {
+      method: "POST",
+      body: JSON.stringify({ insight_ids: insightIds }),
+    }
+  );
+}
+
+/**
+ * Insightマージを確定する
+ */
+export async function confirmInsightMerge(
+  readingId: string,
+  data: InsightMergeConfirmInput
+): Promise<Insight> {
+  return apiClient<Insight>(`/api/readings/${readingId}/insights/merge`, {
+    method: "POST",
+    body: JSON.stringify(data),
   });
 }

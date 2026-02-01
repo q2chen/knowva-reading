@@ -373,7 +373,18 @@ export interface ActionPlan {
   updated_at: string;
 }
 
+export interface ActionPlanCreateInput {
+  action: string;
+  relevance?: string;
+  difficulty?: ActionPlanDifficulty;
+  timeframe?: string;
+}
+
 export interface ActionPlanUpdateInput {
+  action?: string;
+  relevance?: string;
+  difficulty?: ActionPlanDifficulty;
+  timeframe?: string;
   status?: ActionPlanStatus;
 }
 
@@ -422,4 +433,56 @@ export interface UserBadge {
 export interface BadgeCheckResponse {
   new_badges: UserBadge[];
   all_badges: UserBadge[];
+}
+
+// --- Reading CRUD ---
+
+export interface ReadingUpdateInput {
+  status?: ReadingStatus;
+  reading_context?: ReadingContext;
+  book?: BookEmbed;
+}
+
+export interface ReadingDeleteConfirmation {
+  sessions_count: number;
+  messages_count: number;
+  insights_count: number;
+  moods_count: number;
+  reports_count: number;
+  action_plans_count: number;
+}
+
+export interface ReadingDeleteResponse {
+  deleted: boolean;
+  counts: ReadingDeleteConfirmation;
+}
+
+// --- Insight CRUD ---
+
+export type InsightType = "learning" | "impression" | "question" | "connection";
+
+export interface InsightCreateInput {
+  content: string;
+  type?: InsightType;
+}
+
+export interface InsightUpdateInput {
+  content?: string;
+  type?: InsightType;
+}
+
+export interface InsightDeleteResponse {
+  deleted_count: number;
+}
+
+export interface InsightMergePreviewResponse {
+  merged_content: string;
+  suggested_type: InsightType;
+  original_insights: Insight[];
+}
+
+export interface InsightMergeConfirmInput {
+  insight_ids: string[];
+  merged_content: string;
+  type: InsightType;
 }
