@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { apiClient } from "@/lib/api";
 import { Reading } from "@/lib/types";
 import { ReadingCard } from "@/components/readings/ReadingCard";
@@ -9,9 +9,10 @@ import { ReadingForm } from "@/components/readings/ReadingForm";
 
 export default function ReadingsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [readings, setReadings] = useState<Reading[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState(searchParams.get("new") === "true");
 
   const fetchReadings = async () => {
     try {

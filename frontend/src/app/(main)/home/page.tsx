@@ -197,14 +197,21 @@ export default function HomePage() {
       </section>
 
       {/* 最近の読書セクション */}
-      {recentReadings.length > 0 && (
-        <section className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <button
-            onClick={() => setRecentReadingsOpen(!recentReadingsOpen)}
-            className="w-full flex items-center justify-between p-6 text-left"
-          >
-            <h2 className="text-lg font-semibold text-gray-900">📚 最近の読書</h2>
-            <div className="flex items-center gap-3">
+      <section className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <button
+          onClick={() => setRecentReadingsOpen(!recentReadingsOpen)}
+          className="w-full flex items-center justify-between p-6 text-left"
+        >
+          <h2 className="text-lg font-semibold text-gray-900">📚 最近の読書</h2>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/readings?new=true"
+              onClick={(e) => e.stopPropagation()}
+              className="text-sm text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-md"
+            >
+              + 追加
+            </Link>
+            {recentReadings.length > 0 && (
               <Link
                 href="/readings"
                 onClick={(e) => e.stopPropagation()}
@@ -212,32 +219,39 @@ export default function HomePage() {
               >
                 すべて見る →
               </Link>
-              <svg
-                className={`w-5 h-5 text-gray-500 transition-transform ${recentReadingsOpen ? "rotate-180" : ""}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </div>
-          </button>
-          {recentReadingsOpen && (
-            <div className="px-6 pb-6">
+            )}
+            <svg
+              className={`w-5 h-5 text-gray-500 transition-transform ${recentReadingsOpen ? "rotate-180" : ""}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
+          </div>
+        </button>
+        {recentReadingsOpen && (
+          <div className="px-6 pb-6">
+            {recentReadings.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <p className="mb-2">まだ読書記録がありません</p>
+                <p className="text-sm">最初の本を登録して、読書の旅を始めましょう!</p>
+              </div>
+            ) : (
               <div className="grid gap-4 sm:grid-cols-2">
                 {recentReadings.map((reading) => (
                   <ReadingCard key={reading.id} reading={reading} />
                 ))}
               </div>
-            </div>
-          )}
-        </section>
-      )}
+            )}
+          </div>
+        )}
+      </section>
 
       {/* 全読書からのInsight一覧（折りたたみ） */}
       <section className="bg-white rounded-lg shadow-sm border border-gray-200">
