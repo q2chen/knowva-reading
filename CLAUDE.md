@@ -84,6 +84,9 @@ npm run build    # ビルド
 npm run lint     # lint
 ```
 
+### Gitブランチ運用
+- featureブランチからmainへのマージは `git merge --no-ff` を使用し、マージコミットを残す
+
 ### 環境変数（backend/.env）
 - `GOOGLE_API_KEY` - Gemini APIキー（必須）
 - `GOOGLE_GENAI_USE_VERTEXAI=FALSE` - Vertex AIを使わない設定
