@@ -553,6 +553,9 @@ async def get_mentor_context(user_id: str, period_days: int = 7) -> dict:
     # プロファイルエントリを取得
     profile_entries = await list_profile_entries(user_id)
 
+    # オンボーディング情報（current_profile）
+    current_profile = await get_user_profile(user_id) or {}
+
     return {
         "period_days": period_days,
         "readings": [
@@ -575,6 +578,7 @@ async def get_mentor_context(user_id: str, period_days: int = 7) -> dict:
         "profile": {
             "goals": [e for e in profile_entries if e.get("entry_type") == "goal"],
             "interests": [e for e in profile_entries if e.get("entry_type") == "interest"],
+            "current_profile": current_profile,
         },
         "summary": {
             "readings_count": len(recent_readings),
@@ -1149,6 +1153,9 @@ async def get_report_context(user_id: str, reading_id: str) -> dict:
     # 心境データ
     mood_comparison = await get_mood_comparison(user_id, reading_id)
 
+    # オンボーディング情報（current_profile）
+    current_profile = await get_user_profile(user_id) or {}
+
     return {
         "reading": {
             "id": reading_id,
@@ -1179,6 +1186,7 @@ async def get_report_context(user_id: str, reading_id: str) -> dict:
             "interests": [
                 e for e in profile_entries if e.get("entry_type") == "interest"
             ],
+            "current_profile": current_profile,
         },
         "mood_comparison": mood_comparison,
         "summary": {
