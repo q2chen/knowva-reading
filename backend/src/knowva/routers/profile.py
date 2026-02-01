@@ -16,6 +16,8 @@ from knowva.models.profile import (
     NameUpdateResponse,
     ProfileEntryCreate,
     ProfileEntryResponse,
+    UserProfile,
+    UserProfileUpdate,
     UserSettings,
     UserSettingsUpdate,
 )
@@ -153,6 +155,34 @@ async def delete_profile_entry(
     if not success:
         raise HTTPException(status_code=404, detail="Entry not found")
     return {"status": "deleted"}
+
+
+# === ユーザープロフィール ===
+
+
+@router.get("/current", response_model=UserProfile)
+async def get_user_profile(
+    user: dict = Depends(get_current_user),
+):
+    """ユーザーのプロフィール（current_profile）を取得する。"""
+    profile = await firestore.get_user_profile(user["uid"])
+    return UserProfile(**profile) if profile else UserProfile()
+
+
+@router.put("/current", response_model=UserProfile)
+async def update_current_profile(
+    body: UserProfileUpdate,
+    user: dict = Depends(get_current_user),
+):
+    """ユーザーのプロフィール（current_profile）を更新する。"""
+    update_data = body.model_dump(exclude_none=True)
+    if not update_data:
+        # 変更がない場合は現在のプロフィールを返す
+        profile = await firestore.get_user_profile(user["uid"])
+        return UserProfile(**profile) if profile else UserProfile()
+
+    profile = await firestore.update_user_profile(user["uid"], update_data)
+    return UserProfile(**profile) if profile else UserProfile()
 
 
 # === ニックネーム設定 ===

@@ -1,6 +1,6 @@
 # Firebase App Hosting configuration
 runConfig:
-  minInstances: 0
+  minInstances: 1
   maxInstances: 10
   concurrency: 80
   cpu: 1

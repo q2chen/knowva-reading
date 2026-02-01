@@ -7,9 +7,11 @@ from slowapi.middleware import SlowAPIMiddleware
 from knowva.config import settings  # noqa: F401 (環境変数設定を含むため最初にimport)
 from knowva.middleware.rate_limit import limiter
 from knowva.routers import (
+    badges,
     books,
     mentor,
     moods,
+    onboarding,
     profile,
     readings,
     reports,
@@ -30,7 +32,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(badges.router, prefix="/api/badges", tags=["badges"])
 app.include_router(books.router, prefix="/api/books", tags=["books"])
+app.include_router(onboarding.router, prefix="/api/onboarding", tags=["onboarding"])
 app.include_router(readings.router, prefix="/api/readings", tags=["readings"])
 app.include_router(sessions.router, prefix="/api/readings", tags=["sessions"])
 app.include_router(moods.router, prefix="/api/readings", tags=["moods"])

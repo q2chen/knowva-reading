@@ -50,7 +50,7 @@ export default function RegisterPage() {
   };
 
   const handleGoogleSuccess = () => {
-    router.push("/home");
+    router.push("/onboarding");
   };
 
   const handleGoogleError = (errorMessage: string) => {

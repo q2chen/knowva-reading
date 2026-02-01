@@ -52,7 +52,19 @@ class UserProfile(BaseModel):
     situation: Optional[str] = None
     challenges: list[str] = []
     values: list[str] = []
-    reading_motivation: Optional[str] = None
+    reading_motivations: list[str] = []  # 複数選択対応
+    interests: list[str] = []  # 興味のあるジャンル
+
+
+class UserProfileUpdate(BaseModel):
+    """ユーザープロフィール更新リクエスト"""
+
+    life_stage: Optional[str] = None
+    situation: Optional[str] = None
+    challenges: Optional[list[str]] = None
+    values: Optional[list[str]] = None
+    reading_motivations: Optional[list[str]] = None
+    interests: Optional[list[str]] = None
 
 
 class ProfileResponse(BaseModel):

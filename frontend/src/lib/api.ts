@@ -10,6 +10,8 @@ import type {
   SSEMessageDoneData,
   SSEErrorData,
   UserSettings,
+  UserProfile,
+  UserProfileUpdate,
   MentorFeedback,
   MentorMessage,
   MentorFeedbackType,
@@ -23,6 +25,12 @@ import type {
   Report,
   ActionPlan,
   ActionPlanUpdateInput,
+  OnboardingStatus,
+  OnboardingSubmit,
+  OnboardingResponse,
+  BadgeDefinition,
+  UserBadge,
+  BadgeCheckResponse,
 } from "./types";
 
 // Next.js rewrites経由で同一オリジンからAPIにアクセス（CORSを回避）
@@ -161,6 +169,27 @@ export async function sendMessageStream(
     }
     callbacks.onConnectionError?.(error as Error);
   }
+}
+
+// --- ユーザープロフィールAPI ---
+
+/**
+ * ユーザープロフィールを取得する
+ */
+export async function getUserProfile(): Promise<UserProfile> {
+  return apiClient<UserProfile>("/api/profile/current");
+}
+
+/**
+ * ユーザープロフィールを更新する
+ */
+export async function updateUserProfile(
+  profile: UserProfileUpdate
+): Promise<UserProfile> {
+  return apiClient<UserProfile>("/api/profile/current", {
+    method: "PUT",
+    body: JSON.stringify(profile),
+  });
 }
 
 // --- ユーザー設定API ---
@@ -539,4 +568,50 @@ export async function updateActionPlan(
       body: JSON.stringify(data),
     }
   );
+}
+
+// --- オンボーディングAPI ---
+
+/**
+ * オンボーディング状態を取得する
+ */
+export async function getOnboardingStatus(): Promise<OnboardingStatus> {
+  return apiClient<OnboardingStatus>("/api/onboarding/status");
+}
+
+/**
+ * オンボーディング回答を送信する
+ */
+export async function submitOnboarding(
+  data: OnboardingSubmit
+): Promise<OnboardingResponse> {
+  return apiClient<OnboardingResponse>("/api/onboarding/submit", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+// --- バッジAPI ---
+
+/**
+ * 全バッジ定義を取得する
+ */
+export async function getBadgeDefinitions(): Promise<BadgeDefinition[]> {
+  return apiClient<BadgeDefinition[]>("/api/badges");
+}
+
+/**
+ * ユーザーの獲得バッジ一覧を取得する
+ */
+export async function getUserBadges(): Promise<UserBadge[]> {
+  return apiClient<UserBadge[]>("/api/badges/user");
+}
+
+/**
+ * バッジ獲得条件をチェックする
+ */
+export async function checkAndAwardBadges(): Promise<BadgeCheckResponse> {
+  return apiClient<BadgeCheckResponse>("/api/badges/check", {
+    method: "POST",
+  });
 }

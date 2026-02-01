@@ -7,7 +7,7 @@ from knowva.models.insight import (
     InsightVisibilityUpdate,
 )
 from knowva.models.reading import ReadingCreate, ReadingResponse, ReadingUpdate
-from knowva.services import firestore
+from knowva.services import badge_service, firestore
 
 router = APIRouter()
 
@@ -52,6 +52,10 @@ async def create_reading(
         "reading_context": body.reading_context.model_dump() if body.reading_context else None,
     }
     result = await firestore.create_reading(user["uid"], data)
+
+    # バッジ判定（読書記録作成）
+    await badge_service.check_reading_badges(user["uid"])
+
     return result
 
 
@@ -84,6 +88,11 @@ async def update_reading(
     result = await firestore.update_reading(user["uid"], reading_id, data)
     if not result:
         raise HTTPException(status_code=404, detail="Reading not found")
+
+    # ステータス変更時にバッジ判定
+    if "status" in data:
+        await badge_service.check_reading_badges(user["uid"])
+
     return result
 
 

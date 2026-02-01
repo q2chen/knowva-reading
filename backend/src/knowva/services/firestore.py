@@ -221,10 +221,12 @@ async def list_insights(user_id: str, reading_id: str) -> list[dict]:
 
 
 async def get_user_profile(user_id: str) -> Optional[dict]:
+    """ユーザーのcurrent_profileを取得する。"""
     db: AsyncClient = get_firestore_client()
     doc = await db.collection("users").document(user_id).get()
     if doc.exists:
-        return {"user_id": doc.id, **doc.to_dict()}
+        data = doc.to_dict()
+        return data.get("current_profile", {})
     return None
 
 
@@ -1048,6 +1050,62 @@ async def update_action_plan(
     await doc_ref.update(update_data)
     updated = await doc_ref.get()
     return {"id": updated.id, **updated.to_dict()}
+
+
+# --- Report Context (レポート生成用コンテキスト) ---
+
+
+# --- Onboarding ---
+
+
+async def get_onboarding_status(user_id: str) -> dict:
+    """オンボーディングの完了状態を取得する。"""
+    db: AsyncClient = get_firestore_client()
+    doc = await db.collection("users").document(user_id).get()
+    if doc.exists:
+        data = doc.to_dict()
+        return {
+            "completed": data.get("onboarding_completed", False),
+            "completed_at": data.get("onboarding_completed_at"),
+        }
+    return {"completed": False, "completed_at": None}
+
+
+async def set_onboarding_completed(user_id: str) -> dict:
+    """オンボーディング完了フラグを設定する。"""
+    db: AsyncClient = get_firestore_client()
+    doc_ref = db.collection("users").document(user_id)
+    now = _now()
+    await doc_ref.update({
+        "onboarding_completed": True,
+        "onboarding_completed_at": now,
+    })
+    return {"completed": True, "completed_at": now}
+
+
+async def update_user_profile(user_id: str, profile_data: dict) -> dict:
+    """ユーザーのcurrent_profileを更新する。"""
+    db: AsyncClient = get_firestore_client()
+    doc_ref = db.collection("users").document(user_id)
+    doc = await doc_ref.get()
+
+    if not doc.exists:
+        # ドキュメントが存在しない場合は作成
+        data = {
+            "email": None,
+            "name": None,
+            "current_profile": profile_data,
+            "settings": {"interaction_mode": "guided"},
+            "created_at": _now(),
+        }
+        await doc_ref.set(data)
+        return profile_data
+
+    # 既存のcurrent_profileとマージ
+    current_profile = doc.to_dict().get("current_profile", {})
+    updated_profile = {**current_profile, **profile_data}
+    await doc_ref.update({"current_profile": updated_profile})
+    return updated_profile
 
 
 # --- Report Context (レポート生成用コンテキスト) ---

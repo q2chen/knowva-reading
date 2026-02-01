@@ -1,15 +1,17 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signOut } from "firebase/auth";
 import { useAuth } from "@/providers/AuthProvider";
 import { auth } from "@/lib/firebase";
+import { getOnboardingStatus } from "@/lib/api";
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, emailVerified, isAnonymous } = useAuth();
   const router = useRouter();
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -29,7 +31,25 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     }
   }, [user, loading, emailVerified, isAnonymous, router]);
 
-  if (loading || !user) {
+  // オンボーディング未完了チェック
+  useEffect(() => {
+    async function checkOnboarding() {
+      if (!user || loading) return;
+      try {
+        const status = await getOnboardingStatus();
+        if (!status.completed) {
+          router.replace("/onboarding");
+          return;
+        }
+      } catch (error) {
+        console.error("Failed to check onboarding status:", error);
+      }
+      setOnboardingChecked(true);
+    }
+    checkOnboarding();
+  }, [user, loading, router]);
+
+  if (loading || !user || !onboardingChecked) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-pulse text-gray-500">読み込み中...</div>

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth, signInAsGuest } from "@/lib/firebase";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
+import { getOnboardingStatus } from "@/lib/api";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -15,6 +16,20 @@ export default function LoginPage() {
   const [guestLoading, setGuestLoading] = useState(false);
   const router = useRouter();
 
+  const checkOnboardingAndRedirect = async () => {
+    try {
+      const status = await getOnboardingStatus();
+      if (status.completed) {
+        router.push("/home");
+      } else {
+        router.push("/onboarding");
+      }
+    } catch {
+      // エラー時はホームにリダイレクト
+      router.push("/home");
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -22,7 +37,7 @@ export default function LoginPage() {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      router.push("/home");
+      await checkOnboardingAndRedirect();
     } catch {
       setError("メールアドレスまたはパスワードが正しくありません。");
     } finally {
@@ -30,8 +45,8 @@ export default function LoginPage() {
     }
   };
 
-  const handleGoogleSuccess = () => {
-    router.push("/home");
+  const handleGoogleSuccess = async () => {
+    await checkOnboardingAndRedirect();
   };
 
   const handleGoogleError = (errorMessage: string) => {
@@ -43,7 +58,7 @@ export default function LoginPage() {
     setGuestLoading(true);
     try {
       await signInAsGuest();
-      router.push("/home");
+      await checkOnboardingAndRedirect();
     } catch {
       setError("ゲストログインに失敗しました。");
     } finally {

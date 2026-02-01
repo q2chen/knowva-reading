@@ -1,6 +1,6 @@
 from google.adk.tools import ToolContext
 
-from knowva.services import firestore
+from knowva.services import badge_service, firestore
 
 
 async def save_insight(
@@ -48,6 +48,10 @@ async def save_insight(
             "reading_status": reading_status,
         },
     )
+
+    # バッジ判定（Insight保存）
+    await badge_service.check_insight_badges(user_id)
+
     return {"status": "success", "insight_id": result["id"]}
 
 
@@ -155,6 +159,10 @@ async def save_mood(
     }
 
     result = await firestore.save_mood(user_id, reading_id, data)
+
+    # バッジ判定（心境記録）
+    await badge_service.check_onboarding_badges(user_id)
+
     return {"status": "success", "mood_id": result["id"], "mood_type": mood_type}
 
 
@@ -186,6 +194,8 @@ async def update_reading_status(
 
     result = await firestore.update_reading(user_id, reading_id, {"status": new_status})
     if result:
+        # バッジ判定（ステータス変更時）
+        await badge_service.check_reading_badges(user_id)
         return {"status": "success", "new_status": new_status}
     return {"status": "error", "error_message": "Failed to update reading status"}
 
