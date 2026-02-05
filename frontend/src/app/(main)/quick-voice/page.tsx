@@ -5,17 +5,20 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { apiClient, sendMessageStream } from "@/lib/api";
 import { Reading, Session, ReadingStatus } from "@/lib/types";
-import { QuickVoiceButton } from "@/components/quick-voice/QuickVoiceButton";
+import { VoiceMemoRecorder } from "@/components/quick-voice/VoiceMemoRecorder";
+import { VoiceMemoList, VoiceMemo } from "@/components/quick-voice/VoiceMemoList";
 
 export default function QuickVoicePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const readingId = searchParams.get("readingId");
+  const sessionIdParam = searchParams.get("sessionId");
 
   const [reading, setReading] = useState<Reading | null>(null);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [memos, setMemos] = useState<VoiceMemo[]>([]);
 
   useEffect(() => {
     if (!readingId) {
@@ -36,15 +39,42 @@ export default function QuickVoicePage() {
     fetchReading();
   }, [readingId, router]);
 
-  const handleConfirm = useCallback(
-    async (transcript: string) => {
-      if (!reading || !readingId || sending) return;
+  // メモ追加
+  const addMemo = useCallback((text: string) => {
+    setMemos((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        text,
+        createdAt: new Date(),
+      },
+    ]);
+  }, []);
 
-      setSending(true);
-      setError(null);
+  // メモ削除
+  const deleteMemo = useCallback((id: string) => {
+    setMemos((prev) => prev.filter((m) => m.id !== id));
+  }, []);
 
-      try {
-        // 1. セッション作成（Readingのstatusに基づいてsession_typeを決定）
+  // メモを箇条書き形式に整形
+  const formatMemos = useCallback((memoList: VoiceMemo[]): string => {
+    const bulletPoints = memoList.map((m) => `・${m.text}`).join("\n");
+    return `気づきメモ：\n${bulletPoints}`;
+  }, []);
+
+  // 送信処理
+  const handleSubmit = useCallback(async () => {
+    if (!reading || !readingId || sending || memos.length === 0) return;
+
+    setSending(true);
+    setError(null);
+
+    try {
+      const formattedMessage = formatMemos(memos);
+      let sessionId = sessionIdParam;
+
+      // sessionIdがなければ新規セッション作成
+      if (!sessionId) {
         const sessionTypeMap: Record<ReadingStatus, Session["session_type"]> = {
           not_started: "before_reading",
           reading: "during_reading",
@@ -59,35 +89,40 @@ export default function QuickVoicePage() {
             body: JSON.stringify({ session_type: sessionType }),
           }
         );
-
-        // 2. メッセージ送信（SSEストリーミング）
-        await sendMessageStream(
-          readingId,
-          session.id,
-          transcript,
-          "voice",
-          {
-            onMessageDone: () => {
-              // 3. 完了したらチャット画面に遷移
-              router.push(`/readings/${readingId}/chat?sessionId=${session.id}`);
-            },
-            onError: (data) => {
-              setError(data.message || "メッセージ送信に失敗しました");
-              setSending(false);
-            },
-            onConnectionError: (err) => {
-              setError(err.message || "接続エラーが発生しました");
-              setSending(false);
-            },
-          }
-        );
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "エラーが発生しました");
-        setSending(false);
+        sessionId = session.id;
       }
-    },
-    [reading, readingId, router, sending]
-  );
+
+      // メッセージ送信（SSEストリーミング）
+      await sendMessageStream(
+        readingId,
+        sessionId,
+        formattedMessage,
+        "voice",
+        {
+          onMessageDone: () => {
+            // 完了したらチャット画面に遷移
+            router.push(`/readings/${readingId}/chat?sessionId=${sessionId}`);
+          },
+          onError: (data) => {
+            setError(data.message || "メッセージ送信に失敗しました");
+            setSending(false);
+          },
+          onConnectionError: (err) => {
+            setError(err.message || "接続エラーが発生しました");
+            setSending(false);
+          },
+        }
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "エラーが発生しました");
+      setSending(false);
+    }
+  }, [reading, readingId, router, sending, memos, sessionIdParam, formatMemos]);
+
+  // 戻るボタンの遷移先
+  const backHref = sessionIdParam
+    ? `/readings/${readingId}/chat?sessionId=${sessionIdParam}`
+    : "/home";
 
   if (loading) {
     return (
@@ -119,7 +154,7 @@ export default function QuickVoicePage() {
           <p className="text-sm text-gray-500">{reading.book.author}</p>
         </div>
         <Link
-          href="/home"
+          href={backHref}
           className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
           aria-label="閉じる"
         >
@@ -128,24 +163,50 @@ export default function QuickVoicePage() {
       </div>
 
       {/* メインコンテンツ */}
-      <div className="flex-1 flex flex-col items-center justify-center p-6">
+      <div className="flex-1 flex flex-col p-6">
         {sending ? (
-          <div className="flex flex-col items-center gap-4">
+          <div className="flex-1 flex flex-col items-center justify-center gap-4">
             <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
             <p className="text-gray-600">送信中...</p>
           </div>
         ) : (
           <>
-            <p className="text-gray-600 text-center mb-8">
-              読書中に感じたことを、話しかけてください
+            {/* 案内テキスト */}
+            <p className="text-gray-600 text-center mb-6">
+              読書中の気づきを、何回でも録音できます
             </p>
-            <QuickVoiceButton onConfirm={handleConfirm} disabled={sending} />
+
+            {/* 録音コンポーネント */}
+            <div className="flex justify-center mb-6">
+              <VoiceMemoRecorder onMemoComplete={addMemo} disabled={sending} />
+            </div>
+
+            {/* メモリスト */}
+            <div className="flex-1 mb-6">
+              <VoiceMemoList memos={memos} onDelete={deleteMemo} />
+            </div>
+
+            {/* 送信ボタン */}
+            <div className="flex justify-center">
+              <button
+                onClick={handleSubmit}
+                disabled={memos.length === 0 || sending}
+                className={`flex items-center gap-2 px-8 py-3 rounded-full font-medium transition-colors ${
+                  memos.length > 0
+                    ? "bg-green-600 text-white hover:bg-green-700"
+                    : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                }`}
+              >
+                <SendIcon className="w-5 h-5" />
+                送信する（{memos.length}件）
+              </button>
+            </div>
           </>
         )}
 
         {/* エラー表示 */}
         {error && (
-          <div className="mt-6 p-4 bg-red-50 rounded-lg max-w-md">
+          <div className="mt-6 p-4 bg-red-50 rounded-lg max-w-md mx-auto">
             <p className="text-sm text-red-600">{error}</p>
           </div>
         )}
@@ -167,6 +228,24 @@ function CloseIcon({ className }: { className?: string }) {
         strokeLinejoin="round"
         strokeWidth={2}
         d="M6 18L18 6M6 6l12 12"
+      />
+    </svg>
+  );
+}
+
+function SendIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
       />
     </svg>
   );

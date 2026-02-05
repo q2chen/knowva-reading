@@ -154,7 +154,7 @@ export function ChatInput({ onSend, disabled }: Props) {
                   ? "bg-red-500 text-white hover:bg-red-600"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
-              title={isListening ? "録音を停止" : "音声入力を開始"}
+              title={isListening ? "録音を停止" : "音声入力（1回ずつ送信）"}
             >
               {isListening ? (
                 <StopIcon className="w-5 h-5" />

@@ -7,6 +7,7 @@ import { apiClient } from "@/lib/api";
 import { Reading, Session, ReadingStatus } from "@/lib/types";
 import { ChatInterface } from "@/components/chat/ChatInterface";
 import { ToastContainer, useToast } from "@/components/ui/Toast";
+import { MicFAB } from "@/components/chat/MicFAB";
 import { StatusUpdateResult } from "@/hooks/useStreamingChat";
 
 // コンポーネント外に定義してdepsを安定させる
@@ -115,6 +116,9 @@ export default function ChatPage() {
         initiator={initiator}
         onStatusUpdate={handleStatusUpdate}
       />
+
+      {/* 音声メモFAB */}
+      <MicFAB readingId={readingId} sessionId={sessionId} />
     </div>
   );
 }
