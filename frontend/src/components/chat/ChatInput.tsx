@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+import { useCloudSpeechRecognition } from "@/hooks/useCloudSpeechRecognition";
 
 interface Props {
   onSend: (message: string, inputType: "text" | "voice") => void;
@@ -14,14 +14,17 @@ export function ChatInput({ onSend, disabled }: Props) {
 
   const {
     isListening,
-    isSupported,
+    isConnecting,
     transcript,
     interimTranscript,
     error,
     startListening,
     stopListening,
     resetTranscript,
-  } = useSpeechRecognition();
+  } = useCloudSpeechRecognition();
+
+  // Cloud Speech APIは常に利用可能（ブラウザサポートではなくサーバー側で処理）
+  const isSupported = true;
 
   // 録音終了時に入力欄に反映するための前回状態を追跡
   const prevIsListeningRef = useRef(isListening);
@@ -66,11 +69,11 @@ export function ChatInput({ onSend, disabled }: Props) {
     }
   };
 
-  const handleMicToggle = useCallback(() => {
+  const handleMicToggle = useCallback(async () => {
     if (isListening) {
       stopListening();
     } else {
-      startListening();
+      await startListening();
     }
   }, [isListening, startListening, stopListening]);
 
@@ -90,15 +93,27 @@ export function ChatInput({ onSend, disabled }: Props) {
 
   return (
     <div className="border-t border-gray-200 bg-white">
+      {/* 接続中表示 */}
+      {isConnecting && (
+        <div className="px-4 py-2 bg-yellow-50 border-b border-yellow-100">
+          <div className="flex items-center gap-2">
+            <span className="animate-spin h-4 w-4 border-2 border-yellow-500 border-t-transparent rounded-full"></span>
+            <span className="text-xs text-yellow-700 font-medium">
+              音声認識サーバーに接続中...
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* リアルタイム文字起こし表示 */}
-      {isListening && (
+      {isListening && !isConnecting && (
         <div className="px-4 py-2 bg-blue-50 border-b border-blue-100">
           <div className="flex items-center gap-2 mb-1">
             <span className="flex h-2 w-2 relative">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
             </span>
-            <span className="text-xs text-blue-600 font-medium">録音中</span>
+            <span className="text-xs text-blue-600 font-medium">録音中（Cloud STT）</span>
           </div>
           <p className="text-sm text-gray-700 min-h-[1.5em]">
             <span className="text-gray-800">{transcript}</span>
@@ -125,7 +140,7 @@ export function ChatInput({ onSend, disabled }: Props) {
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
           onInput={handleInput}
-          disabled={disabled || isListening}
+          disabled={disabled || isListening || isConnecting}
           placeholder="メッセージを入力..."
           rows={1}
           className="flex-1 px-4 py-2 border border-gray-300 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 max-h-32 disabled:opacity-50 disabled:bg-gray-50 bg-white text-gray-900 placeholder:text-gray-500"
@@ -148,15 +163,15 @@ export function ChatInput({ onSend, disabled }: Props) {
             <button
               type="button"
               onClick={handleMicToggle}
-              disabled={disabled}
+              disabled={disabled || isConnecting}
               className={`px-3 py-2 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                isListening
+                isListening || isConnecting
                   ? "bg-red-500 text-white hover:bg-red-600"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
-              title={isListening ? "録音を停止" : "音声入力（1回ずつ送信）"}
+              title={isListening ? "録音を停止" : "音声入力（Cloud STT）"}
             >
-              {isListening ? (
+              {isListening || isConnecting ? (
                 <StopIcon className="w-5 h-5" />
               ) : (
                 <MicIcon className="w-5 h-5" />
@@ -168,7 +183,7 @@ export function ChatInput({ onSend, disabled }: Props) {
         {/* 送信ボタン */}
         <button
           type="submit"
-          disabled={disabled || !text.trim() || isListening}
+          disabled={disabled || !text.trim() || isListening || isConnecting}
           className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           送信

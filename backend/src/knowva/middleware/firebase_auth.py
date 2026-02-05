@@ -42,3 +42,17 @@ async def get_current_user(
     except Exception as e:
         print(f"Auth error: {e}")  # Debug用
         raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+
+async def verify_websocket_token(token: str) -> dict | None:
+    """WebSocket接続用のFirebase ID Tokenを検証する。"""
+    if not token:
+        return None
+
+    _get_firebase_app()
+    try:
+        decoded = auth.verify_id_token(token, check_revoked=True)
+        return {"uid": decoded["uid"], "email": decoded.get("email")}
+    except Exception as e:
+        print(f"WebSocket auth error: {e}")
+        return None

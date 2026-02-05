@@ -16,6 +16,7 @@ from knowva.routers import (
     readings,
     reports,
     sessions,
+    speech,
     timeline,
 )
 
@@ -42,6 +43,7 @@ app.include_router(reports.router, prefix="/api/readings", tags=["reports"])
 app.include_router(profile.router, prefix="/api/profile", tags=["profile"])
 app.include_router(mentor.router, prefix="/api/mentor", tags=["mentor"])
 app.include_router(timeline.router, prefix="/api/timeline", tags=["timeline"])
+app.include_router(speech.router, prefix="/api", tags=["speech"])
 
 
 @app.get("/api/health")

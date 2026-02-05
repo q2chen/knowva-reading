@@ -19,6 +19,7 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "sse-starlette>=2.0.0",
     "slowapi>=0.1.9",
+    "google-cloud-speech>=2.21.0",
 ]
 
 [project.optional-dependencies]
