@@ -13,6 +13,7 @@ interface Props {
   readingId: string;
   sessionId: string;
   useStreaming?: boolean;
+  initiator?: "ai" | "user";
   onStatusUpdate?: (result: StatusUpdateResult) => void;
 }
 
@@ -20,6 +21,7 @@ export function ChatInterface({
   readingId,
   sessionId,
   useStreaming = true,
+  initiator = "ai",
   onStatusUpdate,
 }: Props) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -77,13 +79,15 @@ export function ChatInterface({
         );
         setMessages(data);
         
-        // メッセージがない場合は自動でセッション初期化を行う
-        if (data.length === 0) {
+        // メッセージがない場合、AIから始める設定なら自動でセッション初期化を行う
+        if (data.length === 0 && initiator === "ai") {
           initializeSession();
         }
       } catch {
-        // 新しいセッションの場合はメッセージなし、初期化を行う
-        initializeSession();
+        // 新しいセッションの場合はメッセージなし、AIから始める設定なら初期化を行う
+        if (initiator === "ai") {
+          initializeSession();
+        }
       } finally {
         setInitialLoading(false);
       }
@@ -161,7 +165,7 @@ export function ChatInterface({
     return () => {
       initAbortControllerRef.current?.abort();
     };
-  }, [readingId, sessionId]);
+  }, [readingId, sessionId, initiator]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

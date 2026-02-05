@@ -23,6 +23,7 @@ export default function ChatPage() {
 
   const readingId = params.readingId as string;
   const sessionId = searchParams.get("sessionId");
+  const initiator = (searchParams.get("initiator") as "ai" | "user") || "ai";
 
   const [reading, setReading] = useState<Reading | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -111,6 +112,7 @@ export default function ChatPage() {
       <ChatInterface
         readingId={readingId}
         sessionId={sessionId}
+        initiator={initiator}
         onStatusUpdate={handleStatusUpdate}
       />
     </div>

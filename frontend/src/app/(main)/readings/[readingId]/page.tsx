@@ -78,6 +78,9 @@ export default function ReadingDetailPage() {
   const [editingPlan, setEditingPlan] = useState<ActionPlan | null>(null);
   const [deletingPlan, setDeletingPlan] = useState<ActionPlan | null>(null);
 
+  // 対話開始者の選択（AIから/自分から）
+  const [chatInitiator, setChatInitiator] = useState<"ai" | "user">("ai");
+
   const fetchMoodData = useCallback(async () => {
     try {
       const moods = await apiClient<MoodData[]>(`/api/readings/${readingId}/moods`);
@@ -178,7 +181,7 @@ export default function ReadingDetailPage() {
           body: JSON.stringify({ session_type: sessionType }),
         }
       );
-      router.push(`/readings/${readingId}/chat?sessionId=${session.id}`);
+      router.push(`/readings/${readingId}/chat?sessionId=${session.id}&initiator=${chatInitiator}`);
     } catch (err) {
       alert(err instanceof Error ? err.message : "セッション作成に失敗しました");
     }
@@ -414,6 +417,35 @@ export default function ReadingDetailPage() {
 
           {/* 対話開始ボタン */}
           <div className="mt-6 space-y-3">
+            {/* 対話開始者の選択 */}
+            <div className="mb-2 flex items-center justify-end gap-2">
+              <span className="text-xs text-gray-500">対話の開始:</span>
+              <div className="flex rounded-md overflow-hidden border border-gray-300">
+                <button
+                  type="button"
+                  onClick={() => setChatInitiator("ai")}
+                  className={`px-3 py-1 text-xs font-medium transition-colors ${
+                    chatInitiator === "ai"
+                      ? "bg-gray-600 text-white"
+                      : "bg-white text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  AIから
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setChatInitiator("user")}
+                  className={`px-3 py-1 text-xs font-medium transition-colors ${
+                    chatInitiator === "user"
+                      ? "bg-gray-600 text-white"
+                      : "bg-white text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  自分から
+                </button>
+              </div>
+            </div>
+
             <button
               onClick={startSession}
               className="w-full px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-base font-medium flex items-center justify-center gap-2"
