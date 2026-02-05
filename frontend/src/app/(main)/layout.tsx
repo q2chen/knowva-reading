@@ -83,9 +83,6 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             Knowva
           </Link>
           <nav className="flex items-center gap-4">
-            <Link href="/home" className="text-sm text-gray-600 hover:text-gray-900">
-              ホーム
-            </Link>
             <Link href="/readings" className="text-sm text-gray-600 hover:text-gray-900">
               読書記録
             </Link>

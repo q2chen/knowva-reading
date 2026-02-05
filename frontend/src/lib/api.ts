@@ -606,6 +606,42 @@ export async function deleteActionPlan(
   });
 }
 
+/**
+ * 全読書のアクションプランを取得する（ホーム画面用）
+ */
+export type ActionPlanWithBook = ActionPlan & { bookTitle: string; readingId: string };
+
+export async function getAllActionPlans(): Promise<ActionPlanWithBook[]> {
+  const readings = await apiClient<Reading[]>("/api/readings");
+  const allPlans: ActionPlanWithBook[] = [];
+
+  await Promise.all(
+    readings.map(async (reading) => {
+      try {
+        const plans = await getActionPlans(reading.id);
+        plans.forEach((plan) => {
+          allPlans.push({
+            ...plan,
+            bookTitle: reading.book.title,
+            readingId: reading.id,
+          });
+        });
+      } catch {
+        // 個別の読書でエラーが起きても続行
+      }
+    })
+  );
+
+  // 未完了を上に、完了を下にソート
+  const statusOrder: Record<string, number> = {
+    pending: 0,
+    in_progress: 1,
+    completed: 2,
+    skipped: 3,
+  };
+  return allPlans.sort((a, b) => statusOrder[a.status] - statusOrder[b.status]);
+}
+
 // --- オンボーディングAPI ---
 
 /**
