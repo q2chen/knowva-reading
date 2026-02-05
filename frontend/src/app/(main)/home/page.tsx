@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { apiClient, getLatestMentorFeedback, chatWithMentor, getUserSettings } from "@/lib/api";
+import { apiClient, getLatestMentorFeedback, chatWithMentor, getUserSettings, updateUserSettings } from "@/lib/api";
 import { AllInsightsResponse, MentorFeedback, MentorFeedbackType, Reading, FabPosition } from "@/lib/types";
 import { InsightList } from "@/components/profile/InsightList";
 import { QuickVoiceFAB } from "@/components/quick-voice/QuickVoiceFAB";
@@ -13,8 +13,8 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [insightsData, setInsightsData] = useState<AllInsightsResponse | null>(null);
   const [groupBy, setGroupBy] = useState<"book" | "type">("book");
-  const [insightsOpen, setInsightsOpen] = useState(true);
-  const [reflectionOpen, setReflectionOpen] = useState(true);
+  const [insightsOpen, setInsightsOpen] = useState(false);
+  const [reflectionOpen, setReflectionOpen] = useState(false);
   const [recentReadingsOpen, setRecentReadingsOpen] = useState(true);
   const [latestFeedback, setLatestFeedback] = useState<MentorFeedback | null>(null);
   const [mentorLoading, setMentorLoading] = useState(false);
@@ -116,13 +116,37 @@ export default function HomePage() {
     }
   };
 
+  const handleFabToggle = async () => {
+    const newPosition = fabPosition === "none" ? "left" : "none";
+    setFabPosition(newPosition);
+    try {
+      await updateUserSettings({ fab_position: newPosition });
+    } catch (error) {
+      console.error("Failed to update FAB settings:", error);
+      // エラー時は元に戻す
+      setFabPosition(fabPosition);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">ホーム</h1>
-
-      {/* ワンタップ音声入力FAB */}
+      {/* ワンタップ音声入力FAB（表示時） */}
       {fabPosition && fabPosition !== "none" && (
-        <QuickVoiceFAB readings={readingInProgress} position={fabPosition} />
+        <QuickVoiceFAB
+          readings={readingInProgress}
+          position={fabPosition}
+          onToggleVisibility={handleFabToggle}
+        />
+      )}
+
+      {/* FAB非表示時の「表示」ボタン */}
+      {fabPosition === "none" && (
+        <button
+          onClick={handleFabToggle}
+          className="fixed bottom-20 md:bottom-6 left-6 z-[9999] text-xs text-gray-400 hover:text-gray-600 bg-white/80 backdrop-blur-sm px-2 py-1 rounded shadow-sm transition-colors"
+        >
+          表示
+        </button>
       )}
 
       {/* 最近の読書セクション（横スクロール） */}

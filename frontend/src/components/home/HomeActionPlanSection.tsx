@@ -8,7 +8,7 @@ import type { ActionPlanStatus } from "@/lib/types";
 export function HomeActionPlanSection() {
   const [actionPlans, setActionPlans] = useState<ActionPlanWithBook[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
   const [updating, setUpdating] = useState<string | null>(null);
 
   const fetchActionPlans = useCallback(async () => {

@@ -424,6 +424,27 @@ export default function ReadingDetailPage() {
               現在のステータス（{currentStatusOption.label}）に応じた対話が始まります
             </p>
 
+            {/* 音声で対話を始める */}
+            <Link
+              href={`/quick-voice?readingId=${readingId}`}
+              className="w-full px-6 py-3 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 text-base font-medium flex items-center justify-center gap-2"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+                />
+              </svg>
+              音声で対話を始める
+            </Link>
+
             <Link
               href={`/readings/${readingId}/report`}
               className="w-full px-6 py-3 bg-white text-indigo-600 border border-indigo-600 rounded-lg hover:bg-indigo-50 text-base font-medium flex items-center justify-center gap-2"

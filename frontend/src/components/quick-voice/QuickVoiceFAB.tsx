@@ -10,20 +10,17 @@ interface ReadingItem {
 interface Props {
   readings: ReadingItem[];
   position?: "left" | "right";
+  onToggleVisibility?: () => void;
 }
 
-export function QuickVoiceFAB({ readings, position = "left" }: Props) {
-  if (readings.length === 0) {
-    return null;
-  }
-
+export function QuickVoiceFAB({ readings, position = "left", onToggleVisibility }: Props) {
   // 最大2冊まで表示
   const displayReadings = readings.slice(0, 2);
 
   const positionClass = position === "left" ? "left-6" : "right-6";
 
   return (
-    <div className={`fixed bottom-20 md:bottom-6 ${positionClass} z-[9999] flex flex-col gap-3`}>
+    <div className={`fixed bottom-20 md:bottom-6 ${positionClass} z-[9999] flex flex-col gap-3 items-start`}>
       {displayReadings.map((reading) => (
         <Link
           key={reading.id}
@@ -42,6 +39,15 @@ export function QuickVoiceFAB({ readings, position = "left" }: Props) {
           </span>
         </Link>
       ))}
+      {/* 表示/非表示切り替えボタン */}
+      {onToggleVisibility && (
+        <button
+          onClick={onToggleVisibility}
+          className="text-xs text-gray-400 hover:text-gray-600 transition-colors px-2 py-1"
+        >
+          非表示
+        </button>
+      )}
     </div>
   );
 }
