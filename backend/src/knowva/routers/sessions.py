@@ -2,9 +2,10 @@ import json
 import logging
 import time
 from collections.abc import AsyncGenerator
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from google import genai
 from google.adk.runners import Runner
 from google.genai import types
 from sse_starlette import EventSourceResponse, ServerSentEvent
@@ -521,3 +522,76 @@ async def init_session(
     )
 
 
+@router.post("/{reading_id}/sessions/{session_id}/end", response_model=SessionResponse)
+async def end_session(
+    reading_id: str,
+    session_id: str,
+    user: dict = Depends(get_current_user),
+):
+    """セッションを終了し、対話内容の要約を生成する。
+
+    チャット画面から離脱する際に呼び出される。
+    対話履歴を取得し、Gemini APIで一行要約を生成してセッションに保存する。
+    """
+    session = await firestore.get_session(user["uid"], reading_id, session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # 既に終了済みの場合はそのまま返す（冪等性）
+    if session.get("ended_at") and session.get("summary"):
+        return session
+
+    # メッセージ履歴を取得
+    messages = await firestore.list_messages(user["uid"], reading_id, session_id)
+
+    # 要約を生成（メッセージがある場合のみ）
+    summary = None
+    if messages:
+        summary = await _generate_session_summary(messages)
+
+    # セッションを更新
+    update_data = {
+        "ended_at": datetime.now(timezone.utc),
+    }
+    if summary:
+        update_data["summary"] = summary
+
+    updated_session = await firestore.update_session(
+        user["uid"], reading_id, session_id, update_data
+    )
+    return updated_session
+
+
+async def _generate_session_summary(messages: list[dict]) -> str | None:
+    """対話履歴から一行の要約を生成する。"""
+    if not messages:
+        return None
+
+    # 対話内容をテキストにまとめる
+    conversation_text = "\n".join(
+        f"{'ユーザー' if msg['role'] == 'user' else 'AI'}: {msg['message']}"
+        for msg in messages
+    )
+
+    prompt = f"""以下は読書についての対話内容です。
+この対話で話された内容を、20〜40文字程度の日本語で一行にまとめてください。
+要約のみを返してください。
+
+対話内容:
+{conversation_text}
+
+要約:"""
+
+    try:
+        client = genai.Client()
+        response = await client.aio.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=prompt,
+        )
+        if response.text:
+            # 改行を除去して一行に
+            return response.text.strip().replace("\n", " ")
+    except Exception as e:
+        logger.error(f"Failed to generate session summary: {e}")
+
+    return None

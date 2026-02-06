@@ -1,9 +1,9 @@
 "use client";
 
 import { useParams, useSearchParams, useRouter } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
-import { apiClient } from "@/lib/api";
+import { apiClient, endSession } from "@/lib/api";
 import { Reading, Session, ReadingStatus } from "@/lib/types";
 import { ChatInterface } from "@/components/chat/ChatInterface";
 import { ToastContainer, useToast } from "@/components/ui/Toast";
@@ -33,6 +33,9 @@ export default function ChatPage() {
   // トースト通知
   const { toasts, showToast, dismissToast } = useToast();
 
+  // セッション終了処理用のref（beforeunloadでも参照できるように）
+  const sessionEndedRef = useRef(false);
+
   useEffect(() => {
     if (!sessionId) {
       router.push(`/readings/${readingId}`);
@@ -57,6 +60,37 @@ export default function ChatPage() {
     }
     fetchData();
   }, [readingId, sessionId, router]);
+
+  // チャット画面離脱時にセッションを終了する
+  useEffect(() => {
+    if (!sessionId) return;
+
+    const handleEndSession = async () => {
+      if (sessionEndedRef.current) return;
+      sessionEndedRef.current = true;
+      try {
+        await endSession(readingId, sessionId);
+      } catch (error) {
+        console.error("Failed to end session:", error);
+      }
+    };
+
+    // beforeunloadでページを離れる前に終了処理
+    const handleBeforeUnload = () => {
+      if (sessionEndedRef.current) return;
+      sessionEndedRef.current = true;
+      // keepalive: trueでfetchを使用（api.tsのendSessionで対応済み）
+      endSession(readingId, sessionId).catch(console.error);
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    // クリーンアップ（Next.jsのルーティングで離脱する場合）
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      handleEndSession();
+    };
+  }, [readingId, sessionId]);
 
   // ステータスラベル（readingのステータスを優先、なければセッションタイプから推測）
   const currentStatusLabel = reading

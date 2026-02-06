@@ -251,6 +251,27 @@ async def get_session(user_id: str, reading_id: str, session_id: str) -> Optiona
     return None
 
 
+async def update_session(
+    user_id: str, reading_id: str, session_id: str, data: dict
+) -> Optional[dict]:
+    """セッションを更新する（summary, ended_at など）"""
+    db: AsyncClient = get_firestore_client()
+    doc_ref = (
+        db.collection("users")
+        .document(user_id)
+        .collection("readings")
+        .document(reading_id)
+        .collection("sessions")
+        .document(session_id)
+    )
+    doc = await doc_ref.get()
+    if not doc.exists:
+        return None
+    await doc_ref.update(data)
+    updated_doc = await doc_ref.get()
+    return {"id": updated_doc.id, **updated_doc.to_dict()}
+
+
 # --- Messages ---
 
 

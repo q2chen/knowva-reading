@@ -23,8 +23,6 @@ import {
   ReadingStatus,
   Insight,
   Session,
-  MoodComparison,
-  MoodData,
   ActionPlan,
   ActionPlanCreateInput,
   ActionPlanUpdateInput,
@@ -38,7 +36,6 @@ import { InsightAddForm } from "@/components/insights/InsightAddForm";
 import { InsightEditForm } from "@/components/insights/InsightEditForm";
 import { InsightActionsBar } from "@/components/insights/InsightActionsBar";
 import { InsightMergeModal } from "@/components/insights/InsightMergeModal";
-import { MoodChart } from "@/components/mood/MoodChart";
 import { ActionPlanList } from "@/components/action-plan/ActionPlanList";
 import { ActionPlanEditForm } from "@/components/action-plan/ActionPlanEditForm";
 import { ReadingEditForm } from "@/components/readings/ReadingEditForm";
@@ -58,7 +55,6 @@ export default function ReadingDetailPage() {
   const [reading, setReading] = useState<Reading | null>(null);
   const [insights, setInsights] = useState<Insight[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
-  const [moodComparison, setMoodComparison] = useState<MoodComparison | null>(null);
   const [actionPlans, setActionPlans] = useState<ActionPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingStatus, setUpdatingStatus] = useState(false);
@@ -85,39 +81,6 @@ export default function ReadingDetailPage() {
   const [chatInitiator, setChatInitiator] = useState<ChatInitiator>("ai");
   const [settingsLoaded, setSettingsLoaded] = useState(false);
 
-  const fetchMoodData = useCallback(async () => {
-    try {
-      const moods = await apiClient<MoodData[]>(`/api/readings/${readingId}/moods`);
-      const before = moods.find((m) => m.mood_type === "before");
-      const after = moods.find((m) => m.mood_type === "after");
-
-      let changes = undefined;
-      if (before && after) {
-        changes = {
-          energy: after.metrics.energy - before.metrics.energy,
-          positivity: after.metrics.positivity - before.metrics.positivity,
-          clarity: after.metrics.clarity - before.metrics.clarity,
-          motivation: after.metrics.motivation - before.metrics.motivation,
-          openness: after.metrics.openness - before.metrics.openness,
-        };
-      }
-
-      setMoodComparison({
-        reading_id: readingId,
-        before_mood: before,
-        after_mood: after,
-        changes,
-      });
-    } catch {
-      setMoodComparison({
-        reading_id: readingId,
-        before_mood: undefined,
-        after_mood: undefined,
-        changes: undefined,
-      });
-    }
-  }, [readingId]);
-
   useEffect(() => {
     async function fetchData() {
       try {
@@ -129,8 +92,6 @@ export default function ReadingDetailPage() {
         setReading(readingData);
         setInsights(insightsData);
         setSessions(sessionsData);
-
-        await fetchMoodData();
 
         try {
           const plansData = await getActionPlans(readingId);
@@ -159,7 +120,7 @@ export default function ReadingDetailPage() {
       }
     }
     fetchData();
-  }, [readingId, router, fetchMoodData, settingsLoaded]);
+  }, [readingId, router, settingsLoaded]);
 
   const updateStatus = async (newStatus: ReadingStatus) => {
     if (!reading || reading.status === newStatus) return;
@@ -519,14 +480,14 @@ export default function ReadingDetailPage() {
         {sessions.length === 0 ? (
           <p className="text-sm text-gray-500">まだ対話セッションがありません</p>
         ) : (
-          <div className="space-y-2 max-h-[140px] overflow-y-auto">
+          <div className="space-y-2 max-h-[200px] overflow-y-auto">
             {sessions.map((session) => (
               <Link
                 key={session.id}
                 href={`/readings/${readingId}/chat?sessionId=${session.id}`}
                 className="block p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 hover:shadow-sm transition-all"
               >
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between mb-1">
                   <span className="text-sm font-medium text-gray-700">
                     {session.session_type === "before_reading" && "📖 読書前"}
                     {session.session_type === "during_reading" && "📚 読書中"}
@@ -537,6 +498,11 @@ export default function ReadingDetailPage() {
                     {session.ended_at && " (終了)"}
                   </span>
                 </div>
+                {session.summary && (
+                  <p className="text-xs text-gray-500 line-clamp-1">
+                    {session.summary}
+                  </p>
+                )}
               </Link>
             ))}
           </div>
@@ -723,24 +689,6 @@ export default function ReadingDetailPage() {
               onDelete={(plan) => setDeletingPlan(plan)}
             />
           )}
-        </div>
-      </details>
-
-      {/* 心境の記録・可視化セクション */}
-      <details className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6 group">
-        <summary className="p-4 cursor-pointer list-none flex items-center justify-between hover:bg-gray-50 rounded-lg">
-          <div className="flex items-center gap-2">
-            <span className="text-gray-400 group-open:rotate-90 transition-transform">▶</span>
-            <h2 className="text-lg font-semibold text-gray-900">
-              心境の変化
-            </h2>
-          </div>
-          <p className="text-xs text-gray-500">
-            AIとの対話から自動記録されます
-          </p>
-        </summary>
-        <div className="px-6 pb-6">
-          {moodComparison && <MoodChart comparison={moodComparison} />}
         </div>
       </details>
 

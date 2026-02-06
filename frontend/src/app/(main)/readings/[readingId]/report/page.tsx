@@ -18,11 +18,14 @@ import type {
   ActionPlan,
   ActionPlanCreateInput,
   ActionPlanUpdateInput,
+  MoodComparison,
+  MoodData,
 } from "@/lib/types";
 import { ReportView } from "@/components/report/ReportView";
 import { ActionPlanList } from "@/components/action-plan/ActionPlanList";
 import { ActionPlanEditForm } from "@/components/action-plan/ActionPlanEditForm";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { MoodChart } from "@/components/mood/MoodChart";
 
 export default function ReportPage() {
   const params = useParams();
@@ -32,6 +35,7 @@ export default function ReportPage() {
   const [reading, setReading] = useState<Reading | null>(null);
   const [report, setReport] = useState<Report | null>(null);
   const [actionPlans, setActionPlans] = useState<ActionPlan[]>([]);
+  const [moodComparison, setMoodComparison] = useState<MoodComparison | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [generatingText, setGeneratingText] = useState("");
@@ -41,6 +45,34 @@ export default function ReportPage() {
   const [isAddingPlan, setIsAddingPlan] = useState(false);
   const [editingPlan, setEditingPlan] = useState<ActionPlan | null>(null);
   const [deletingPlan, setDeletingPlan] = useState<ActionPlan | null>(null);
+
+  const fetchMoodData = useCallback(async () => {
+    try {
+      const moods = await apiClient<MoodData[]>(`/api/readings/${readingId}/moods`);
+      const before = moods.find((m) => m.mood_type === "before");
+      const after = moods.find((m) => m.mood_type === "after");
+
+      let changes = undefined;
+      if (before && after) {
+        changes = {
+          energy: after.metrics.energy - before.metrics.energy,
+          positivity: after.metrics.positivity - before.metrics.positivity,
+          clarity: after.metrics.clarity - before.metrics.clarity,
+          motivation: after.metrics.motivation - before.metrics.motivation,
+          openness: after.metrics.openness - before.metrics.openness,
+        };
+      }
+
+      setMoodComparison({
+        reading_id: readingId,
+        before_mood: before,
+        after_mood: after,
+        changes,
+      });
+    } catch {
+      setMoodComparison(null);
+    }
+  }, [readingId]);
 
   const fetchData = useCallback(async () => {
     try {
@@ -61,7 +93,8 @@ export default function ReportPage() {
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+    fetchMoodData();
+  }, [fetchData, fetchMoodData]);
 
   const handleGenerate = async () => {
     setGenerating(true);
@@ -257,6 +290,17 @@ export default function ReportPage() {
           />
         )}
       </div>
+
+      {/* 心境の変化 */}
+      {moodComparison && (moodComparison.before_mood || moodComparison.after_mood) && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mt-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">心境の変化</h2>
+          <p className="text-sm text-gray-500 mb-4">
+            AIとの対話から自動記録されました
+          </p>
+          <MoodChart comparison={moodComparison} />
+        </div>
+      )}
 
       {/* アクションプラン削除確認ダイアログ */}
       <ConfirmDialog

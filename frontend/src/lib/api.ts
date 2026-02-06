@@ -362,6 +362,37 @@ export async function initializeReadingSession(
   }
 }
 
+// --- セッション終了API ---
+
+/**
+ * セッションを終了し、対話内容の要約を生成する
+ */
+export async function endSession(
+  readingId: string,
+  sessionId: string
+): Promise<void> {
+  const user = auth.currentUser;
+  const token = user ? await user.getIdToken() : null;
+
+  // sendBeacon用のAPI呼び出し（ページ離脱時でも確実に送信するため）
+  await fetch(`/api/readings/${readingId}/sessions/${sessionId}/end`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
+    keepalive: true,
+  });
+}
+
+/**
+ * セッション終了用のBeacon URL（sendBeacon用）
+ * 認証情報が必要なためfetchを使用
+ */
+export function getEndSessionUrl(readingId: string, sessionId: string): string {
+  return `/api/readings/${readingId}/sessions/${sessionId}/end`;
+}
+
 // --- ニックネームAPI ---
 
 /**
