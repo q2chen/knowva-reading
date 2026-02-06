@@ -8,6 +8,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { auth } from "@/lib/firebase";
 import { getOnboardingStatus } from "@/lib/api";
 import { BottomNavigation } from "@/components/layout/BottomNavigation";
+import { AccountLinkBanner } from "@/components/auth/AccountLinkBanner";
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, emailVerified, isAnonymous } = useAuth();
@@ -78,6 +79,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* ゲストユーザー向け誘導バナー */}
+      {isAnonymous && <AccountLinkBanner />}
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
           <Link href="/home" className="text-xl font-bold text-gray-900">

@@ -4,6 +4,11 @@ import {
   connectAuthEmulator,
   GoogleAuthProvider,
   signInAnonymously,
+  linkWithCredential,
+  linkWithPopup,
+  EmailAuthProvider,
+  sendEmailVerification,
+  User,
 } from "firebase/auth";
 
 const firebaseConfig = {
@@ -21,6 +26,24 @@ googleProvider.setCustomParameters({ prompt: "select_account" });
 
 // Anonymous認証（ゲストアクセス用）
 export const signInAsGuest = () => signInAnonymously(auth);
+
+// アカウントリンク: メール/パスワードで匿名アカウントをアップグレード
+export const linkWithEmail = async (
+  user: User,
+  email: string,
+  password: string
+): Promise<User> => {
+  const credential = EmailAuthProvider.credential(email, password);
+  const result = await linkWithCredential(user, credential);
+  await sendEmailVerification(result.user);
+  return result.user;
+};
+
+// アカウントリンク: Googleアカウントで匿名アカウントをアップグレード
+export const linkWithGoogle = async (user: User): Promise<User> => {
+  const result = await linkWithPopup(user, googleProvider);
+  return result.user;
+};
 
 if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
   try {
