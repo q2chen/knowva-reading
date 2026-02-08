@@ -58,9 +58,7 @@ async def award_badge(
 
     # バッジを付与
     db: AsyncClient = get_firestore_client()
-    doc_ref = (
-        db.collection("users").document(user_id).collection("badges").document()
-    )
+    doc_ref = db.collection("users").document(user_id).collection("badges").document()
     now = _now()
     doc_data = {
         "badge_id": badge_id,

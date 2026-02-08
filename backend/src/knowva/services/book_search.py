@@ -159,9 +159,6 @@ def _extract_openbd_description(data: dict) -> Optional[str]:
     if not onix:
         return None
 
-    # Try to get from DescriptiveDetail -> TitleDetail (usually contains description)
-    descriptive = onix.get("DescriptiveDetail", {})
-
     # Try CollateralDetail for text content (descriptions, table of contents, etc.)
     collateral = onix.get("CollateralDetail", {})
     text_contents = collateral.get("TextContent", [])

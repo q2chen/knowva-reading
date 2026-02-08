@@ -218,9 +218,15 @@ class FirestoreSessionService(BaseSessionService):
 
         # Firestoreのupdated_atを更新
         db = get_firestore_client()
-        await db.collection("adk_sessions").document(session.id).update({
-            "updated_at": _now(),
-        })
+        await (
+            db.collection("adk_sessions")
+            .document(session.id)
+            .update(
+                {
+                    "updated_at": _now(),
+                }
+            )
+        )
 
         return event
 

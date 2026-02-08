@@ -283,9 +283,7 @@ async def delete_insights(
     return InsightDeleteResponse(deleted_count=result["deleted_count"])
 
 
-@router.post(
-    "/{reading_id}/insights/merge/preview", response_model=InsightMergePreviewResponse
-)
+@router.post("/{reading_id}/insights/merge/preview", response_model=InsightMergePreviewResponse)
 async def preview_insight_merge(
     reading_id: str,
     body: InsightMergeRequest,
@@ -293,9 +291,7 @@ async def preview_insight_merge(
 ):
     """LLMを使って複数Insightのマージプレビューを生成する。"""
     if len(body.insight_ids) < 2:
-        raise HTTPException(
-            status_code=400, detail="At least 2 insights are required for merge"
-        )
+        raise HTTPException(status_code=400, detail="At least 2 insights are required for merge")
 
     user_id = user["uid"]
 
@@ -312,7 +308,7 @@ async def preview_insight_merge(
     # LLMでマージテキストを生成
     insights_text = "\n".join(
         [
-            f"- Insight {i+1}: {ins['content']}（type: {ins.get('type', 'unknown')}）"
+            f"- Insight {i + 1}: {ins['content']}（type: {ins.get('type', 'unknown')}）"
             for i, ins in enumerate(original_insights)
         ]
     )
@@ -331,7 +327,8 @@ async def preview_insight_merge(
 
 ## 出力形式
 以下のJSON形式で出力してください（```json などのマークダウン記法は使わず、純粋なJSONのみ）:
-{{"merged_content": "統合された気づきの内容", "suggested_type": "learning|impression|question|connection"}}
+{{"merged_content": "統合された気づきの内容",
+ "suggested_type": "learning|impression|question|connection"}}
 """
 
     try:
@@ -379,9 +376,7 @@ async def merge_insights(
 ):
     """Insightのマージを確定する。"""
     if len(body.insight_ids) < 2:
-        raise HTTPException(
-            status_code=400, detail="At least 2 insights are required for merge"
-        )
+        raise HTTPException(status_code=400, detail="At least 2 insights are required for merge")
 
     result = await firestore.merge_insights(
         user_id=user["uid"],

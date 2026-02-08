@@ -50,11 +50,7 @@ async def list_readings(user_id: str) -> list[dict]:
 async def get_reading(user_id: str, reading_id: str) -> Optional[dict]:
     db: AsyncClient = get_firestore_client()
     doc = await (
-        db.collection("users")
-        .document(user_id)
-        .collection("readings")
-        .document(reading_id)
-        .get()
+        db.collection("users").document(user_id).collection("readings").document(reading_id).get()
     )
     if doc.exists:
         return {"id": doc.id, **doc.to_dict()}
@@ -63,12 +59,7 @@ async def get_reading(user_id: str, reading_id: str) -> Optional[dict]:
 
 async def update_reading(user_id: str, reading_id: str, data: dict) -> Optional[dict]:
     db: AsyncClient = get_firestore_client()
-    doc_ref = (
-        db.collection("users")
-        .document(user_id)
-        .collection("readings")
-        .document(reading_id)
-    )
+    doc_ref = db.collection("users").document(user_id).collection("readings").document(reading_id)
     doc = await doc_ref.get()
     if not doc.exists:
         return None
@@ -87,12 +78,7 @@ async def update_reading(user_id: str, reading_id: str, data: dict) -> Optional[
 async def get_reading_related_counts(user_id: str, reading_id: str) -> dict:
     """読書記録に関連するデータの件数を取得する（削除確認用）。"""
     db: AsyncClient = get_firestore_client()
-    base_path = (
-        db.collection("users")
-        .document(user_id)
-        .collection("readings")
-        .document(reading_id)
-    )
+    base_path = db.collection("users").document(user_id).collection("readings").document(reading_id)
 
     # 各サブコレクションの件数をカウント
     sessions_count = 0
@@ -137,12 +123,7 @@ async def get_reading_related_counts(user_id: str, reading_id: str) -> dict:
 async def delete_reading_cascade(user_id: str, reading_id: str) -> dict:
     """読書記録と関連する全データを削除する。"""
     db: AsyncClient = get_firestore_client()
-    base_path = (
-        db.collection("users")
-        .document(user_id)
-        .collection("readings")
-        .document(reading_id)
-    )
+    base_path = db.collection("users").document(user_id).collection("readings").document(reading_id)
 
     # 読書記録が存在するか確認
     reading_doc = await base_path.get()
@@ -275,9 +256,7 @@ async def update_session(
 # --- Messages ---
 
 
-async def save_message(
-    user_id: str, reading_id: str, session_id: str, data: dict
-) -> dict:
+async def save_message(user_id: str, reading_id: str, session_id: str, data: dict) -> dict:
     db: AsyncClient = get_firestore_client()
     doc_ref = (
         db.collection("users")
@@ -315,9 +294,7 @@ async def list_messages(user_id: str, reading_id: str, session_id: str) -> list[
 # --- Insights ---
 
 
-async def save_insight(
-    user_id: str, reading_id: str, data: dict
-) -> dict:
+async def save_insight(user_id: str, reading_id: str, data: dict) -> dict:
     db: AsyncClient = get_firestore_client()
     doc_ref = (
         db.collection("users")
@@ -373,9 +350,7 @@ async def update_insight(
     return {"id": updated.id, **updated.to_dict()}
 
 
-async def delete_insights(
-    user_id: str, reading_id: str, insight_ids: list[str]
-) -> dict:
+async def delete_insights(user_id: str, reading_id: str, insight_ids: list[str]) -> dict:
     """複数のInsightを削除する。関連するpublicInsightsも削除。"""
     db: AsyncClient = get_firestore_client()
     deleted_count = 0
@@ -519,7 +494,12 @@ async def get_user_settings(user_id: str) -> dict:
             "chat_initiator": settings.get("chat_initiator", "ai"),
         }
     # ドキュメントが存在しない場合はデフォルト値
-    return {"interaction_mode": "guided", "timeline_order": "random", "fab_position": "left", "chat_initiator": "ai"}
+    return {
+        "interaction_mode": "guided",
+        "timeline_order": "random",
+        "fab_position": "left",
+        "chat_initiator": "ai",
+    }
 
 
 async def update_user_settings(user_id: str, settings: dict) -> dict:
@@ -678,12 +658,7 @@ async def get_mood_comparison(user_id: str, reading_id: str) -> dict:
 async def save_profile_entry(user_id: str, data: dict) -> dict:
     """プロファイルエントリを保存する。"""
     db: AsyncClient = get_firestore_client()
-    doc_ref = (
-        db.collection("users")
-        .document(user_id)
-        .collection("profileEntries")
-        .document()
-    )
+    doc_ref = db.collection("users").document(user_id).collection("profileEntries").document()
     now = _now()
     doc_data = {
         **data,
@@ -694,9 +669,7 @@ async def save_profile_entry(user_id: str, data: dict) -> dict:
     return {"id": doc_ref.id, **doc_data}
 
 
-async def list_profile_entries(
-    user_id: str, entry_type: Optional[str] = None
-) -> list[dict]:
+async def list_profile_entries(user_id: str, entry_type: Optional[str] = None) -> list[dict]:
     """プロファイルエントリ一覧を取得する。"""
     db: AsyncClient = get_firestore_client()
     query = db.collection("users").document(user_id).collection("profileEntries")
@@ -712,16 +685,11 @@ async def list_profile_entries(
     return results
 
 
-async def update_profile_entry(
-    user_id: str, entry_id: str, data: dict
-) -> Optional[dict]:
+async def update_profile_entry(user_id: str, entry_id: str, data: dict) -> Optional[dict]:
     """プロファイルエントリを更新する。"""
     db: AsyncClient = get_firestore_client()
     doc_ref = (
-        db.collection("users")
-        .document(user_id)
-        .collection("profileEntries")
-        .document(entry_id)
+        db.collection("users").document(user_id).collection("profileEntries").document(entry_id)
     )
     doc = await doc_ref.get()
     if not doc.exists:
@@ -739,10 +707,7 @@ async def delete_profile_entry(user_id: str, entry_id: str) -> bool:
     """プロファイルエントリを削除する。"""
     db: AsyncClient = get_firestore_client()
     doc_ref = (
-        db.collection("users")
-        .document(user_id)
-        .collection("profileEntries")
-        .document(entry_id)
+        db.collection("users").document(user_id).collection("profileEntries").document(entry_id)
     )
     doc = await doc_ref.get()
     if not doc.exists:
@@ -793,15 +758,13 @@ async def get_mentor_context(user_id: str, period_days: int = 7) -> dict:
     # 読書記録を取得（期間内に更新があったもの）
     readings = await list_readings(user_id)
     recent_readings = [
-        r for r in readings
-        if r.get("updated_at") and r.get("updated_at") >= cutoff_date
+        r for r in readings if r.get("updated_at") and r.get("updated_at") >= cutoff_date
     ]
 
     # Insight を取得（期間内に作成されたもの）
     all_insights = await list_all_insights(user_id, limit=200)
     recent_insights = [
-        i for i in all_insights
-        if i.get("created_at") and i.get("created_at") >= cutoff_date
+        i for i in all_insights if i.get("created_at") and i.get("created_at") >= cutoff_date
     ]
 
     # プロファイルエントリを取得
@@ -844,12 +807,7 @@ async def get_mentor_context(user_id: str, period_days: int = 7) -> dict:
 async def save_mentor_feedback(user_id: str, data: dict) -> dict:
     """メンターフィードバックを保存する。"""
     db: AsyncClient = get_firestore_client()
-    doc_ref = (
-        db.collection("users")
-        .document(user_id)
-        .collection("mentorFeedbacks")
-        .document()
-    )
+    doc_ref = db.collection("users").document(user_id).collection("mentorFeedbacks").document()
     now = _now()
     doc_data = {
         **data,
@@ -1017,9 +975,7 @@ async def create_public_insight(
 async def delete_public_insight(insight_id: str) -> bool:
     """公開Insightを削除する。"""
     db: AsyncClient = get_firestore_client()
-    docs = db.collection("publicInsights").where(
-        filter=FieldFilter("insight_id", "==", insight_id)
-    )
+    docs = db.collection("publicInsights").where(filter=FieldFilter("insight_id", "==", insight_id))
     deleted = False
     async for doc in docs.stream():
         await doc.reference.delete()
@@ -1059,9 +1015,7 @@ async def list_public_insights(
 ) -> tuple[list[dict], Optional[str], bool]:
     """公開Insight一覧を取得する（新着順）。"""
     db: AsyncClient = get_firestore_client()
-    query = db.collection("publicInsights").order_by(
-        "published_at", direction="DESCENDING"
-    )
+    query = db.collection("publicInsights").order_by("published_at", direction="DESCENDING")
 
     if cursor:
         # カーソルからpublished_atを復元
@@ -1275,11 +1229,13 @@ async def update_report_visibility(
     if not doc.exists:
         return None
 
-    await doc_ref.update({
-        "visibility": visibility,
-        "include_context_analysis": include_context_analysis,
-        "updated_at": _now(),
-    })
+    await doc_ref.update(
+        {
+            "visibility": visibility,
+            "include_context_analysis": include_context_analysis,
+            "updated_at": _now(),
+        }
+    )
     updated = await doc_ref.get()
     return {"id": updated.id, **updated.to_dict()}
 
@@ -1356,9 +1312,7 @@ async def create_public_report(
 async def delete_public_report(report_id: str) -> bool:
     """公開レポートを削除する。"""
     db: AsyncClient = get_firestore_client()
-    docs = db.collection("publicReports").where(
-        filter=FieldFilter("report_id", "==", report_id)
-    )
+    docs = db.collection("publicReports").where(filter=FieldFilter("report_id", "==", report_id))
     deleted = False
     async for doc in docs.stream():
         await doc.reference.delete()
@@ -1371,9 +1325,7 @@ async def list_public_reports(
 ) -> tuple[list[dict], Optional[str], bool]:
     """公開レポート一覧を取得する（新着順）。"""
     db: AsyncClient = get_firestore_client()
-    query = db.collection("publicReports").order_by(
-        "published_at", direction="DESCENDING"
-    )
+    query = db.collection("publicReports").order_by("published_at", direction="DESCENDING")
 
     if cursor:
         from datetime import datetime
@@ -1510,9 +1462,7 @@ async def update_action_plan(
     return {"id": updated.id, **updated.to_dict()}
 
 
-async def create_action_plan_manual(
-    user_id: str, reading_id: str, data: dict
-) -> dict:
+async def create_action_plan_manual(user_id: str, reading_id: str, data: dict) -> dict:
     """ユーザーが手動でアクションプランを作成する。"""
     db: AsyncClient = get_firestore_client()
     doc_ref = (
@@ -1612,10 +1562,12 @@ async def set_onboarding_completed(user_id: str) -> dict:
     db: AsyncClient = get_firestore_client()
     doc_ref = db.collection("users").document(user_id)
     now = _now()
-    await doc_ref.update({
-        "onboarding_completed": True,
-        "onboarding_completed_at": now,
-    })
+    await doc_ref.update(
+        {
+            "onboarding_completed": True,
+            "onboarding_completed_at": now,
+        }
+    )
     return {"completed": True, "completed_at": now}
 
 
@@ -1715,9 +1667,7 @@ async def get_report_context(user_id: str, reading_id: str) -> dict:
         ],
         "profile": {
             "goals": [e for e in profile_entries if e.get("entry_type") == "goal"],
-            "interests": [
-                e for e in profile_entries if e.get("entry_type") == "interest"
-            ],
+            "interests": [e for e in profile_entries if e.get("entry_type") == "interest"],
             "current_profile": current_profile,
         },
         "mood_comparison": mood_comparison,

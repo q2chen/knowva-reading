@@ -569,8 +569,7 @@ async def _generate_session_summary(messages: list[dict]) -> str | None:
 
     # 対話内容をテキストにまとめる
     conversation_text = "\n".join(
-        f"{'ユーザー' if msg['role'] == 'user' else 'AI'}: {msg['message']}"
-        for msg in messages
+        f"{'ユーザー' if msg['role'] == 'user' else 'AI'}: {msg['message']}" for msg in messages
     )
 
     prompt = f"""以下は読書についての対話内容です。
