@@ -40,6 +40,10 @@ jobs:
     defaults:
       run:
         working-directory: frontend
+    env:
+      NEXT_PUBLIC_FB_API_KEY: ci-dummy-key
+      NEXT_PUBLIC_FB_AUTH_DOMAIN: ci-dummy.firebaseapp.com
+      NEXT_PUBLIC_FB_PROJECT_ID: ci-dummy-project
     steps:
       - uses: actions/checkout@v4
 
