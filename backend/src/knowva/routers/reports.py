@@ -92,9 +92,7 @@ async def generate_report(
         accumulated_text = ""
         pending_tool_calls: dict[str, str] = {}
 
-        yield ServerSentEvent(
-            data=json.dumps({"message_id": message_id}), event="message_start"
-        )
+        yield ServerSentEvent(data=json.dumps({"message_id": message_id}), event="message_start")
 
         try:
             async for event in runner.run_async(
@@ -107,21 +105,14 @@ async def generate_report(
                         if hasattr(part, "function_call") and part.function_call:
                             fc = part.function_call
                             tool_name = getattr(fc, "name", "unknown")
-                            tool_id = getattr(
-                                fc, "id", f"tc_{int(time.time() * 1000)}"
-                            )
+                            tool_id = getattr(fc, "id", f"tc_{int(time.time() * 1000)}")
                             pending_tool_calls[tool_id] = tool_name
                             yield ServerSentEvent(
-                                data=json.dumps(
-                                    {"tool_name": tool_name, "tool_call_id": tool_id}
-                                ),
+                                data=json.dumps({"tool_name": tool_name, "tool_call_id": tool_id}),
                                 event="tool_call_start",
                             )
 
-                        if (
-                            hasattr(part, "function_response")
-                            and part.function_response
-                        ):
+                        if hasattr(part, "function_response") and part.function_response:
                             fr = part.function_response
                             tool_id = getattr(fr, "id", None)
                             tool_name = getattr(fr, "name", None)
@@ -176,12 +167,8 @@ async def generate_report(
             )
             return
 
-        yield ServerSentEvent(
-            data=json.dumps({"text": accumulated_text}), event="text_done"
-        )
-        yield ServerSentEvent(
-            data=json.dumps({"status": "completed"}), event="message_done"
-        )
+        yield ServerSentEvent(data=json.dumps({"text": accumulated_text}), event="text_done")
+        yield ServerSentEvent(data=json.dumps({"status": "completed"}), event="message_done")
 
         # セッションクリーンアップ
         try:
@@ -339,9 +326,7 @@ async def create_action_plan(
     return result
 
 
-@router.patch(
-    "/{reading_id}/action-plans/{plan_id}", response_model=ActionPlanResponse
-)
+@router.patch("/{reading_id}/action-plans/{plan_id}", response_model=ActionPlanResponse)
 async def update_action_plan(
     reading_id: str,
     plan_id: str,

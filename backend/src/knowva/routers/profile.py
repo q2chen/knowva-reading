@@ -82,9 +82,7 @@ async def list_all_insights(
         type_counts: dict[str, int] = {}
         for i in insights:
             type_counts[i.type] = type_counts.get(i.type, 0) + 1
-        groups = [
-            InsightGroup(key=t, insight_type=t, count=c) for t, c in type_counts.items()
-        ]
+        groups = [InsightGroup(key=t, insight_type=t, count=c) for t, c in type_counts.items()]
 
     return AllInsightsResponse(
         insights=insights,

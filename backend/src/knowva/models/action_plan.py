@@ -13,13 +13,9 @@ class ActionPlanCreate(BaseModel):
     """アクションプラン作成リクエスト（内部用）。"""
 
     action: str = Field(description="具体的なアクション内容")
-    source_insight_id: Optional[str] = Field(
-        default=None, description="関連するInsightのID"
-    )
+    source_insight_id: Optional[str] = Field(default=None, description="関連するInsightのID")
     relevance: str = Field(description="ユーザーのプロファイル（目標・悩み）との関連性")
-    difficulty: ActionPlanDifficulty = Field(
-        default="medium", description="難易度"
-    )
+    difficulty: ActionPlanDifficulty = Field(default="medium", description="難易度")
     timeframe: str = Field(description="実行目安期間（例: 1週間、3日、1カ月）")
 
 
@@ -54,9 +50,7 @@ class ActionPlanResponse(BaseModel):
     id: str
     reading_id: str
     action: str = Field(description="具体的なアクション内容")
-    source_insight_id: Optional[str] = Field(
-        default=None, description="関連するInsightのID"
-    )
+    source_insight_id: Optional[str] = Field(default=None, description="関連するInsightのID")
     relevance: str = Field(description="ユーザーのプロファイル（目標・悩み）との関連性")
     difficulty: ActionPlanDifficulty = Field(description="難易度")
     timeframe: str = Field(description="実行目安期間")

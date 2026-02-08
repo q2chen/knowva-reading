@@ -189,9 +189,7 @@ async def get_timeline_v2(
                 limit=limit + 1, cursor=cursor
             )
         if item_type in ("report", "all"):
-            reports_data, _, _ = await firestore.list_public_reports(
-                limit=limit + 1, cursor=cursor
-            )
+            reports_data, _, _ = await firestore.list_public_reports(limit=limit + 1, cursor=cursor)
 
         # published_atでマージソート
         combined = []
