@@ -8,6 +8,14 @@ export interface StatusUpdateResult {
   new_status: "not_started" | "reading" | "completed";
 }
 
+export interface InsightSavedResult {
+  insight_id: string;
+}
+
+export interface ProfileEntrySavedResult {
+  entry_id: string;
+}
+
 interface UseStreamingChatOptions {
   readingId: string;
   sessionId: string;
@@ -15,6 +23,8 @@ interface UseStreamingChatOptions {
   onError?: (error: string) => void;
   onStatusUpdate?: (result: StatusUpdateResult) => void;
   onOptionsRequest?: (options: OptionsState) => void;
+  onInsightSaved?: (result: InsightSavedResult) => void;
+  onProfileEntrySaved?: (result: ProfileEntrySavedResult) => void;
 }
 
 export function useStreamingChat({
@@ -24,6 +34,8 @@ export function useStreamingChat({
   onError,
   onStatusUpdate,
   onOptionsRequest,
+  onInsightSaved,
+  onProfileEntrySaved,
 }: UseStreamingChatOptions) {
   const [streamingState, setStreamingState] = useState<StreamingState>({
     isStreaming: false,
@@ -98,6 +110,34 @@ export function useStreamingChat({
               new_status: data.result.new_status as StatusUpdateResult["new_status"],
             });
           }
+
+          // Insight保存ツールの完了を検知
+          if (
+            toolName === "save_insight" &&
+            data.result &&
+            typeof data.result === "object" &&
+            "status" in data.result &&
+            data.result.status === "success" &&
+            "insight_id" in data.result
+          ) {
+            onInsightSaved?.({
+              insight_id: data.result.insight_id as string,
+            });
+          }
+
+          // プロフィールエントリ保存ツールの完了を検知
+          if (
+            toolName === "save_profile_entry" &&
+            data.result &&
+            typeof data.result === "object" &&
+            "status" in data.result &&
+            data.result.status === "success" &&
+            "entry_id" in data.result
+          ) {
+            onProfileEntrySaved?.({
+              entry_id: data.result.entry_id as string,
+            });
+          }
         },
         onOptionsRequest: (data) => {
           const optionsState: OptionsState = {
@@ -166,7 +206,7 @@ export function useStreamingChat({
         }
       }
     },
-    [readingId, sessionId, onMessageComplete, onError, onStatusUpdate, onOptionsRequest]
+    [readingId, sessionId, onMessageComplete, onError, onStatusUpdate, onOptionsRequest, onInsightSaved, onProfileEntrySaved]
   );
 
   const cancelStream = useCallback(() => {

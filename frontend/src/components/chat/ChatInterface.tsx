@@ -7,7 +7,7 @@ import { MessageBubble } from "./MessageBubble";
 import { StreamingMessageBubble } from "./StreamingMessageBubble";
 import { ChatInput } from "./ChatInput";
 import { OptionsSelector } from "./OptionsSelector";
-import { useStreamingChat, StatusUpdateResult } from "@/hooks/useStreamingChat";
+import { useStreamingChat, StatusUpdateResult, InsightSavedResult, ProfileEntrySavedResult } from "@/hooks/useStreamingChat";
 
 interface Props {
   readingId: string;
@@ -15,6 +15,8 @@ interface Props {
   useStreaming?: boolean;
   initiator?: "ai" | "user";
   onStatusUpdate?: (result: StatusUpdateResult) => void;
+  onInsightSaved?: (result: InsightSavedResult) => void;
+  onProfileEntrySaved?: (result: ProfileEntrySavedResult) => void;
 }
 
 export function ChatInterface({
@@ -23,6 +25,8 @@ export function ChatInterface({
   useStreaming = true,
   initiator = "ai",
   onStatusUpdate,
+  onInsightSaved,
+  onProfileEntrySaved,
 }: Props) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -54,6 +58,8 @@ export function ChatInterface({
     onOptionsRequest: (options) => {
       setCurrentOptions(options);
     },
+    onInsightSaved,
+    onProfileEntrySaved,
   });
 
   // 初期化用のストリーミング状態

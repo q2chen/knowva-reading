@@ -117,6 +117,16 @@ export default function ChatPage() {
     [showToast]
   );
 
+  // Insight保存時のハンドラー
+  const handleInsightSaved = useCallback(() => {
+    showToast("気づきを保存しました", "success", 3000);
+  }, [showToast]);
+
+  // プロフィールエントリ保存時のハンドラー
+  const handleProfileEntrySaved = useCallback(() => {
+    showToast("プロフィール情報を保存しました", "success", 3000);
+  }, [showToast]);
+
   if (loading || !reading || !sessionId) {
     return <div className="text-center py-8 text-gray-500">読み込み中...</div>;
   }
@@ -149,6 +159,8 @@ export default function ChatPage() {
         sessionId={sessionId}
         initiator={initiator}
         onStatusUpdate={handleStatusUpdate}
+        onInsightSaved={handleInsightSaved}
+        onProfileEntrySaved={handleProfileEntrySaved}
       />
 
       {/* 音声メモFAB */}
