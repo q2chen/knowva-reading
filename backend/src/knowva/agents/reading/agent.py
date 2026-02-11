@@ -1,5 +1,5 @@
 from google.adk.agents import LlmAgent
-from google.adk.tools import FunctionTool
+from google.adk.tools import AgentTool, FunctionTool
 
 from knowva.agents.common.tools import save_profile_entry
 from knowva.agents.reading.book_guide.agent import book_guide_agent
@@ -157,7 +157,7 @@ update_reading_status ツールを呼び出してステータスを更新して�
 
 ## 専門的な質問への対応
 ユーザーから本の内容や概念について専門的な質問があった場合は、
-book_guide_agent に委譲してください。
+book_guide_agent ツールを使って回答してください。
 例：「パラダイムって何？」「この理論の背景は？」「著者の意図は？」
 
 ## 注意事項
@@ -174,6 +174,6 @@ book_guide_agent に委譲してください。
         FunctionTool(func=save_profile_entry),
         FunctionTool(func=update_reading_status),
         FunctionTool(func=present_options),
+        AgentTool(agent=book_guide_agent),
     ],
-    sub_agents=[book_guide_agent],
 )

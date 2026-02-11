@@ -1,7 +1,7 @@
-"""BookGuide SubAgent。
+"""BookGuide Agent（AgentTool）。
 
-Reading Agentのサブエージェントとして、本の内容・背景・解説などの
-専門的な質問に回答する。
+Reading AgentからAgentToolとして呼び出され、本の内容・背景・解説などの
+専門的な質問に回答する。結果はReading Agentに返される。
 """
 
 from google.adk.agents import LlmAgent
