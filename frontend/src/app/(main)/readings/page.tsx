@@ -68,18 +68,9 @@ export default function ReadingsPage() {
       )}
 
       {readings.length === 0 ? (
-        <div className="flex justify-center py-12">
-          <button
-            onClick={() => setShowForm(true)}
-            className="w-32 group"
-          >
-            <div className="w-full aspect-[2/3] border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center group-hover:border-blue-400 group-hover:bg-blue-50 transition-colors">
-              <span className="text-3xl text-gray-400 group-hover:text-blue-500">+</span>
-            </div>
-            <p className="mt-2 text-sm text-gray-500 text-center group-hover:text-blue-600">
-              新しい本を追加
-            </p>
-          </button>
+        <div className="text-center py-12 text-gray-500">
+          <p className="mb-2">まだ読書記録がありません</p>
+          <p className="text-sm">「新しい読書記録」ボタンから始めましょう</p>
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
