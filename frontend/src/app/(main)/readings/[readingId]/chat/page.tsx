@@ -132,7 +132,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)]">
+    <div className="flex flex-col h-[calc(100dvh-128px)] md:h-[calc(100dvh-64px)] -mt-6 -mb-20 md:-mb-6">
       {/* トースト通知 */}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
       <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200 bg-white">
