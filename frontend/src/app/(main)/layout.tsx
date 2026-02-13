@@ -78,7 +78,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 overflow-x-hidden">
       {/* ゲストユーザー向け誘導バナー */}
       {isAnonymous && <AccountLinkBanner />}
       <header className="bg-white border-b border-gray-200">
