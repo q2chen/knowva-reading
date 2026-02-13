@@ -23,7 +23,7 @@ export function ReadingCard({ reading }: Props) {
   return (
     <Link
       href={`/readings/${reading.id}`}
-      className="block p-4 bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow"
+      className="block p-4 bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow overflow-hidden"
     >
       <div className="flex gap-3">
         {reading.book.cover_url ? (
@@ -57,7 +57,7 @@ export function ReadingCard({ reading }: Props) {
               <h3 className="font-semibold text-gray-900 truncate">
                 {reading.book.title}
               </h3>
-              <p className="text-sm text-gray-600 mt-0.5">{reading.book.author}</p>
+              <p className="text-sm text-gray-600 mt-0.5 truncate">{reading.book.author}</p>
             </div>
             <span className={`flex-shrink-0 px-2 py-1 text-xs rounded-full ${statusColor}`}>
               {statusLabel}

@@ -73,7 +73,7 @@ export default function ReadingsPage() {
           <p className="text-sm">「新しい読書記録」ボタンから始めましょう</p>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 min-w-0">
           {readings.map((reading) => (
             <ReadingCard key={reading.id} reading={reading} />
           ))}
