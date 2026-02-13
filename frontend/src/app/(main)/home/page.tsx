@@ -156,7 +156,7 @@ export default function HomePage() {
           onClick={() => setRecentReadingsOpen(!recentReadingsOpen)}
           className="w-full flex items-center justify-between p-6 text-left"
         >
-          <h2 className="text-lg font-semibold text-gray-900">📚 読書中</h2>
+          <h2 className="text-lg font-semibold text-gray-900">📚 Current Reads</h2>
           <div className="flex items-center gap-3">
             {recentReadings.length > 0 && (
               <Link
