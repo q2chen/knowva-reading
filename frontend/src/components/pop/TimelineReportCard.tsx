@@ -84,7 +84,10 @@ export default function TimelineReportCard({
         {report.context_analysis && (
           <div className="bg-amber-50 p-3 rounded-lg">
             <h4 className="text-xs font-semibold text-amber-800 mb-1">
-              あなたへの関連付け
+              {report.display_name.endsWith("さん")
+                ? report.display_name
+                : `${report.display_name}さん`}
+              への関連付け
             </h4>
             <p className="text-xs text-gray-700 line-clamp-3">
               {report.context_analysis}

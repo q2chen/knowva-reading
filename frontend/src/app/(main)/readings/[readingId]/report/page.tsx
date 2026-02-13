@@ -267,6 +267,15 @@ export default function ReportPage() {
         </div>
       )}
 
+      {/* レポート未作成時の誘導 */}
+      {!generating && !report && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+          <p className="text-center text-gray-500 py-6">
+            レポートが作成されていません。「レポートを生成」ボタンでレポートを作成しましょう
+          </p>
+        </div>
+      )}
+
       {/* おすすめのアクションプラン */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-2">
