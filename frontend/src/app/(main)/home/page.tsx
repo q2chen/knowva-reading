@@ -184,13 +184,17 @@ export default function HomePage() {
         {recentReadingsOpen && (
           <div className="px-6 pb-6">
             {recentReadings.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <p className="mb-2">まだ読書記録がありません</p>
+              <div className="flex justify-center py-8">
                 <Link
                   href="/readings?new=true"
-                  className="inline-block mt-2 px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-lg"
+                  className="w-28 group"
                 >
-                  最初の本を登録する
+                  <div className="w-full aspect-[2/3] border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center group-hover:border-blue-400 group-hover:bg-blue-50 transition-colors">
+                    <span className="text-3xl text-gray-400 group-hover:text-blue-500">+</span>
+                  </div>
+                  <p className="mt-2 text-sm text-gray-500 text-center group-hover:text-blue-600">
+                    新しい本を追加
+                  </p>
                 </Link>
               </div>
             ) : (
