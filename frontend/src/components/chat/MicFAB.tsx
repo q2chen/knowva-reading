@@ -11,7 +11,7 @@ export function MicFAB({ readingId, sessionId }: Props) {
   return (
     <Link
       href={`/quick-voice?readingId=${readingId}&sessionId=${sessionId}`}
-      className="fixed bottom-24 left-4 z-50 flex items-center gap-2 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg transition-all"
+      className="fixed bottom-36 left-4 z-50 flex items-center gap-2 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-lg transition-all"
       aria-label="音声メモ（複数まとめて送信）"
     >
       <MicIcon className="w-5 h-5" />
