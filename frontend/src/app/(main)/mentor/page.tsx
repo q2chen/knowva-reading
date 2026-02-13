@@ -56,7 +56,7 @@ export default function MentorPage() {
               : "text-gray-600 hover:text-gray-900"
           }`}
         >
-          📋 フィードバック履歴
+          📋 振り返り履歴
         </button>
       </div>
 

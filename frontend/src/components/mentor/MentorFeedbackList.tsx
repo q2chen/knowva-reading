@@ -51,7 +51,7 @@ export function MentorFeedbackList({ refreshTrigger }: Props) {
   if (feedbacks.length === 0) {
     return (
       <div className="text-center py-12 bg-white rounded-lg shadow">
-        <p className="text-gray-500 text-lg">📭 フィードバック履歴がありません</p>
+        <p className="text-gray-500 text-lg">📭 振り返り履歴がありません</p>
         <p className="text-gray-400 text-sm mt-2">
           「対話」タブで週次/月次の振り返りを生成してみましょう
         </p>

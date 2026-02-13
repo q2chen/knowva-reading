@@ -274,7 +274,7 @@ export default function HomePage() {
               onClick={(e) => e.stopPropagation()}
               className="text-sm text-blue-600 hover:text-blue-800"
             >
-              対話画面へ →
+              すべて見る →
             </Link>
             <svg
               className={`w-5 h-5 text-gray-500 transition-transform ${reflectionOpen ? "rotate-180" : ""}`}
