@@ -277,12 +277,8 @@ async def send_message_stream(
                                     options_data = {
                                         "prompt": result.get("prompt", ""),
                                         "options": result.get("options", []),
-                                        "allow_multiple": result.get(
-                                            "allow_multiple", True
-                                        ),
-                                        "allow_freeform": result.get(
-                                            "allow_freeform", True
-                                        ),
+                                        "allow_multiple": result.get("allow_multiple", True),
+                                        "allow_freeform": result.get("allow_freeform", True),
                                     }
                                     yield ServerSentEvent(
                                         data=json.dumps(options_data),
@@ -453,12 +449,8 @@ async def init_session(
                                     options_data = {
                                         "prompt": result.get("prompt", ""),
                                         "options": result.get("options", []),
-                                        "allow_multiple": result.get(
-                                            "allow_multiple", True
-                                        ),
-                                        "allow_freeform": result.get(
-                                            "allow_freeform", True
-                                        ),
+                                        "allow_multiple": result.get("allow_multiple", True),
+                                        "allow_freeform": result.get("allow_freeform", True),
                                     }
                                     yield ServerSentEvent(
                                         data=json.dumps(options_data),
