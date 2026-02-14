@@ -7,6 +7,7 @@ import { apiClient, sendMessageStream } from "@/lib/api";
 import { Reading, Session, ReadingStatus } from "@/lib/types";
 import { VoiceMemoRecorder } from "@/components/quick-voice/VoiceMemoRecorder";
 import { VoiceMemoList, VoiceMemo } from "@/components/quick-voice/VoiceMemoList";
+import { useWakeLock } from "@/hooks/useWakeLock";
 
 export default function QuickVoicePage() {
   const router = useRouter();
@@ -19,6 +20,7 @@ export default function QuickVoicePage() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [memos, setMemos] = useState<VoiceMemo[]>([]);
+  const wakeLock = useWakeLock();
 
   useEffect(() => {
     if (!readingId) {
@@ -180,6 +182,34 @@ export default function QuickVoicePage() {
             <div className="flex justify-center mb-6">
               <VoiceMemoRecorder onMemoComplete={addMemo} disabled={sending} />
             </div>
+
+            {/* 画面スリープ防止チェックボックス */}
+            {wakeLock.isSupported && (
+              <div className="flex justify-center mb-6">
+                <label className="flex flex-col items-start cursor-pointer">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={wakeLock.isActive}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          wakeLock.request();
+                        } else {
+                          wakeLock.release();
+                        }
+                      }}
+                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700">
+                      画面をオフにしない
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1 ml-6">
+                    画面ロックが行われると録音が停止します
+                  </p>
+                </label>
+              </div>
+            )}
 
             {/* メモリスト */}
             <div className="flex-1 mb-6">
