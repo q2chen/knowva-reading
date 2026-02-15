@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { getTimelineV2, getUserSettings } from "@/lib/api";
 import type { TimelineItem, TimelineOrder, TimelineItemType } from "@/lib/types";
@@ -13,6 +13,7 @@ export default function PopPage() {
   const [order, setOrder] = useState<TimelineOrder>("random");
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
   // フィルタ: 気づき（Insight）とレポートの表示切り替え
   const [showInsights, setShowInsights] = useState(true);
   const [showReports, setShowReports] = useState(true);
@@ -36,7 +37,8 @@ export default function PopPage() {
       try {
         const cursor = isLoadMore ? nextCursor || undefined : undefined;
         const itemType = getItemType();
-        const response = await getTimelineV2(order, itemType, 20, cursor);
+        const limit = order === "random" ? 10 : 20;
+        const response = await getTimelineV2(order, itemType, limit, cursor);
 
         if (isLoadMore) {
           setItems((prev) => [...prev, ...response.items]);
@@ -67,6 +69,24 @@ export default function PopPage() {
     }
     init();
   }, []);
+
+  // Intersection Observerで自動読み込み（新着順のみ）
+  useEffect(() => {
+    if (order !== "newest" || !hasMore || loadingMore) return;
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          fetchTimeline(true);
+        }
+      },
+      { rootMargin: "200px" }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [order, hasMore, loadingMore, fetchTimeline]);
 
   // 表示順またはフィルタが変わったらタイムラインを再取得
   useEffect(() => {
@@ -237,16 +257,12 @@ export default function PopPage() {
             ))}
           </div>
 
-          {/* もっと見るボタン */}
-          {hasMore && order === "newest" && (
-            <div className="text-center pt-4">
-              <button
-                onClick={handleLoadMore}
-                disabled={loadingMore}
-                className="px-6 py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
-              >
-                {loadingMore ? "読み込み中..." : "もっと見る"}
-              </button>
+          {/* 無限スクロール用センチネル（新着順のみ） */}
+          {order === "newest" && (
+            <div ref={sentinelRef} className="text-center pt-4">
+              {loadingMore && (
+                <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-gray-200 border-t-blue-600" />
+              )}
             </div>
           )}
 
