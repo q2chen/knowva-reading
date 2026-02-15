@@ -278,11 +278,6 @@ export function ChatInterface({
     setShowOptions(false);
   };
 
-  const handleOptionsDismiss = () => {
-    setCurrentOptions(null);
-    clearOptionsRequest();
-  };
-
   if (initialLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -370,7 +365,7 @@ export function ChatInterface({
               <OptionsSelector
                 options={currentOptions}
                 onSelect={handleOptionsSelect}
-                onDismiss={() => { handleOptionsDismiss(); setShowOptions(false); }}
+                onDismiss={() => setShowOptions(false)}
                 disabled={isLoading || isStreaming || isInitializing}
               />
             </div>
