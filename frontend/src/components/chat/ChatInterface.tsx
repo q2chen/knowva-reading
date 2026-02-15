@@ -35,6 +35,10 @@ export function ChatInterface({
   const [error, setError] = useState<string | null>(null);
   const [currentOptions, setCurrentOptions] = useState<OptionsState | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const streamingMessageRef = useRef<HTMLDivElement>(null);
+  const initStreamingMessageRef = useRef<HTMLDivElement>(null);
+  const hasScrolledToStreamingRef = useRef(false);
+  const hasScrolledToInitStreamingRef = useRef(false);
   const initAbortControllerRef = useRef<AbortController | null>(null);
 
   // ストリーミングフック
@@ -187,9 +191,39 @@ export function ChatInterface({
     };
   }, [readingId, sessionId, initiator]);
 
+  // メッセージ追加時のスクロール: ユーザーメッセージなら最下部、AIメッセージなら回答先頭へ
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, streamingState.currentText, initStreamingState.currentText]);
+    if (messages.length === 0) return;
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage.role === "user") {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    } else if (lastMessage.role === "assistant") {
+      const el = document.querySelector(`[data-message-id="${lastMessage.id}"]`);
+      el?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [messages]);
+
+  // ストリーミング開始時: AI回答の先頭へ1回だけスクロール
+  useEffect(() => {
+    if (streamingState.isStreaming && streamingState.currentText && !hasScrolledToStreamingRef.current) {
+      hasScrolledToStreamingRef.current = true;
+      streamingMessageRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    if (!streamingState.isStreaming) {
+      hasScrolledToStreamingRef.current = false;
+    }
+  }, [streamingState.isStreaming, streamingState.currentText]);
+
+  // 初期化ストリーミング開始時: 同様に先頭へ1回だけスクロール
+  useEffect(() => {
+    if (initStreamingState.isStreaming && initStreamingState.currentText && !hasScrolledToInitStreamingRef.current) {
+      hasScrolledToInitStreamingRef.current = true;
+      initStreamingMessageRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    if (!initStreamingState.isStreaming) {
+      hasScrolledToInitStreamingRef.current = false;
+    }
+  }, [initStreamingState.isStreaming, initStreamingState.currentText]);
 
   const handleSend = async (
     text: string,
@@ -271,16 +305,18 @@ export function ChatInterface({
         ))}
 
         {/* 初期化中のストリーミング表示 */}
-        {initStreamingState.isStreaming && initStreamingState.currentText && (
-          <div className="flex justify-start">
-            <div className="max-w-[80%] px-4 py-2 bg-gray-100 rounded-2xl rounded-bl-md">
-              <p className="whitespace-pre-wrap text-gray-800">
-                {initStreamingState.currentText}
-                <span className="inline-block w-1 h-4 ml-0.5 bg-gray-400 animate-pulse" />
-              </p>
+        <div ref={initStreamingMessageRef}>
+          {initStreamingState.isStreaming && initStreamingState.currentText && (
+            <div className="flex justify-start">
+              <div className="max-w-[80%] px-4 py-2 bg-gray-100 rounded-2xl rounded-bl-md">
+                <p className="whitespace-pre-wrap text-gray-800">
+                  {initStreamingState.currentText}
+                  <span className="inline-block w-1 h-4 ml-0.5 bg-gray-400 animate-pulse" />
+                </p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* 初期化中のローディング表示（テキストがまだない場合） */}
         {showInitializing && !initStreamingState.currentText && (
@@ -296,7 +332,9 @@ export function ChatInterface({
         )}
 
         {/* ストリーミング中のメッセージ表示 */}
-        <StreamingMessageBubble streamingState={streamingState} />
+        <div ref={streamingMessageRef}>
+          <StreamingMessageBubble streamingState={streamingState} />
+        </div>
 
         {/* 従来モードのローディング表示 */}
         {isLoading && !useStreaming && (
@@ -321,7 +359,7 @@ export function ChatInterface({
 
       {/* 選択肢表示 */}
       {currentOptions && (
-        <div className="px-4 py-2 border-t border-gray-100">
+        <div className="px-4 py-2 border-t border-gray-100 max-h-[33dvh] overflow-y-auto">
           <OptionsSelector
             options={currentOptions}
             onSelect={handleOptionsSelect}
