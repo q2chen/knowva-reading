@@ -34,6 +34,7 @@ export function ChatInterface({
   const [isInitializing, setIsInitializing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentOptions, setCurrentOptions] = useState<OptionsState | null>(null);
+  const [showOptions, setShowOptions] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const streamingMessageRef = useRef<HTMLDivElement>(null);
   const initStreamingMessageRef = useRef<HTMLDivElement>(null);
@@ -61,6 +62,7 @@ export function ChatInterface({
     onStatusUpdate,
     onOptionsRequest: (options) => {
       setCurrentOptions(options);
+      setShowOptions(false);
     },
     onInsightSaved,
     onProfileEntrySaved,
@@ -141,6 +143,7 @@ export function ChatInterface({
             allowMultiple: data.allow_multiple,
             allowFreeform: data.allow_freeform,
           });
+          setShowOptions(false);
         },
         onMessageDone: (data) => {
           setMessages((prev) => [...prev, data.message]);
@@ -231,6 +234,7 @@ export function ChatInterface({
   ) => {
     setError(null);
     setCurrentOptions(null); // 選択肢をクリア
+    setShowOptions(false);
     clearOptionsRequest();
 
     // ユーザーメッセージを即時表示（楽観的更新）
@@ -271,6 +275,7 @@ export function ChatInterface({
     // 選択肢を結合してメッセージとして送信
     const text = selectedOptions.join("、");
     handleSend(text, "text");
+    setShowOptions(false);
   };
 
   const handleOptionsDismiss = () => {
@@ -359,13 +364,26 @@ export function ChatInterface({
 
       {/* 選択肢表示 */}
       {currentOptions && (
-        <div className="px-4 py-2 border-t border-gray-100 max-h-[33dvh] overflow-y-auto">
-          <OptionsSelector
-            options={currentOptions}
-            onSelect={handleOptionsSelect}
-            onDismiss={handleOptionsDismiss}
-            disabled={isLoading || isStreaming || isInitializing}
-          />
+        <div className="border-t border-gray-100">
+          {showOptions ? (
+            <div className="px-4 py-2">
+              <OptionsSelector
+                options={currentOptions}
+                onSelect={handleOptionsSelect}
+                onDismiss={() => { handleOptionsDismiss(); setShowOptions(false); }}
+                disabled={isLoading || isStreaming || isInitializing}
+              />
+            </div>
+          ) : (
+            <div className="px-4 py-2 flex justify-center">
+              <button
+                onClick={() => setShowOptions(true)}
+                className="px-4 py-1.5 text-sm text-blue-600 bg-blue-50 rounded-full hover:bg-blue-100 transition-colors"
+              >
+                選択肢を表示
+              </button>
+            </div>
+          )}
         </div>
       )}
 
