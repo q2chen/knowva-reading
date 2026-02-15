@@ -70,7 +70,7 @@ export default function TimelineReportCard({
         {/* 要約 */}
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-3 rounded-lg">
           <h4 className="text-xs font-semibold text-blue-800 mb-1">要約</h4>
-          <p className="text-xs text-gray-700 line-clamp-3">{report.summary}</p>
+          <p className="text-xs text-gray-700 whitespace-pre-wrap">{report.summary}</p>
         </div>
 
         {/* 得られた洞察 */}
@@ -78,7 +78,7 @@ export default function TimelineReportCard({
           <h4 className="text-xs font-semibold text-gray-700 mb-1">
             得られた洞察
           </h4>
-          <p className="text-xs text-gray-600 line-clamp-3">
+          <p className="text-xs text-gray-600 whitespace-pre-wrap">
             {report.insights_summary}
           </p>
         </div>
@@ -92,7 +92,7 @@ export default function TimelineReportCard({
                 : `${report.display_name}さん`}
               への関連付け
             </h4>
-            <p className="text-xs text-gray-700 line-clamp-3">
+            <p className="text-xs text-gray-700 whitespace-pre-wrap">
               {report.context_analysis}
             </p>
           </div>
