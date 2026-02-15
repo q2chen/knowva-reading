@@ -92,7 +92,8 @@ npm run lint     # lint
 ```
 
 ### Gitブランチ運用
-- featureブランチからmainへのマージは `git merge --no-ff` を使用し、マージコミットを残す
+- 変更を加える際は、最新のmainを取得し、そこから新規ブランチを作成して作業する
+- 完成したらPRを作成し、GitHub上でmainへマージする（直接mainにpushしない）
 
 ### 環境変数（backend/.env）
 - `GOOGLE_API_KEY` - Gemini APIキー（必須）
