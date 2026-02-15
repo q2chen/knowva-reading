@@ -86,6 +86,35 @@ async def list_sessions(
     return await firestore.list_sessions(user["uid"], reading_id)
 
 
+@router.delete("/{reading_id}/sessions/{session_id}")
+async def delete_session(
+    reading_id: str,
+    session_id: str,
+    user: dict = Depends(get_current_user),
+):
+    """セッションとそのメッセージを削除する。"""
+    reading = await firestore.get_reading(user["uid"], reading_id)
+    if not reading:
+        raise HTTPException(status_code=404, detail="Reading not found")
+
+    deleted = await firestore.delete_session(user["uid"], reading_id, session_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    # ADKセッションも削除（存在しなくてもエラーにしない）
+    try:
+        session_service = get_session_service()
+        await session_service.delete_session(
+            app_name=APP_NAME,
+            user_id=user["uid"],
+            session_id=session_id,
+        )
+    except Exception:
+        logger.warning(f"Failed to delete ADK session: {session_id}")
+
+    return {"deleted": True}
+
+
 @router.post(
     "/{reading_id}/sessions/{session_id}/messages",
     response_model=MessageResponse,

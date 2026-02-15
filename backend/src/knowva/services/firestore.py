@@ -253,6 +253,30 @@ async def update_session(
     return {"id": updated_doc.id, **updated_doc.to_dict()}
 
 
+async def delete_session(user_id: str, reading_id: str, session_id: str) -> bool:
+    """セッションとメッセージを削除する。Insightは削除しない。"""
+    db: AsyncClient = get_firestore_client()
+    session_ref = (
+        db.collection("users")
+        .document(user_id)
+        .collection("readings")
+        .document(reading_id)
+        .collection("sessions")
+        .document(session_id)
+    )
+    doc = await session_ref.get()
+    if not doc.exists:
+        return False
+
+    # メッセージサブコレクションを先に削除
+    async for msg_doc in session_ref.collection("messages").stream():
+        await msg_doc.reference.delete()
+
+    # セッション本体を削除
+    await session_ref.delete()
+    return True
+
+
 # --- Messages ---
 
 

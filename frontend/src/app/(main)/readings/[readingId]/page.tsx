@@ -10,6 +10,7 @@ import {
   createActionPlan,
   updateActionPlan,
   deleteActionPlan,
+  deleteSession,
   updateReading,
   previewReadingDelete,
   deleteReading,
@@ -78,6 +79,7 @@ export default function ReadingDetailPage() {
   const [isAddingPlan, setIsAddingPlan] = useState(false);
   const [editingPlan, setEditingPlan] = useState<ActionPlan | null>(null);
   const [deletingPlan, setDeletingPlan] = useState<ActionPlan | null>(null);
+  const [deletingSession, setDeletingSession] = useState<Session | null>(null);
 
   // 対話開始者の選択（AIから/自分から）
   const [chatInitiator, setChatInitiator] = useState<ChatInitiator>("ai");
@@ -322,6 +324,18 @@ export default function ReadingDetailPage() {
     }
   };
 
+  // セッション削除
+  const handleDeleteSession = async () => {
+    if (!deletingSession) return;
+    try {
+      await deleteSession(readingId, deletingSession.id);
+      setSessions((prev) => prev.filter((s) => s.id !== deletingSession.id));
+      setDeletingSession(null);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "削除に失敗しました");
+    }
+  };
+
   if (loading || !reading) {
     return <div className="text-center py-8 text-gray-500">読み込み中...</div>;
   }
@@ -534,10 +548,25 @@ export default function ReadingDetailPage() {
                     {session.session_type === "during_reading" && "📚 読書中"}
                     {session.session_type === "after_reading" && "✨ 読了後"}
                   </span>
-                  <span className="text-xs text-gray-400">
-                    {new Date(session.started_at).toLocaleDateString("ja-JP")}
-                    {session.ended_at && " (終了)"}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400">
+                      {new Date(session.started_at).toLocaleDateString("ja-JP")}
+                      {session.ended_at && " (終了)"}
+                    </span>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setDeletingSession(session);
+                      }}
+                      className="p-1 text-gray-300 hover:text-red-500 transition-colors"
+                      title="セッションを削除"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
                 {session.summary && (
                   <p className="text-xs text-gray-500 line-clamp-1">
@@ -837,6 +866,26 @@ export default function ReadingDetailPage() {
         variant="danger"
         onConfirm={handleDeletePlan}
         onCancel={() => setDeletingPlan(null)}
+      />
+
+      {/* セッション削除確認ダイアログ */}
+      <ConfirmDialog
+        isOpen={!!deletingSession}
+        title="この対話セッションを削除しますか？"
+        message={
+          <p>
+            この対話セッションとメッセージ履歴が削除されます。
+            <br />
+            気づき・学びは削除されません。
+            <br />
+            この操作は取り消せません。
+          </p>
+        }
+        confirmLabel="削除する"
+        cancelLabel="キャンセル"
+        variant="danger"
+        onConfirm={handleDeleteSession}
+        onCancel={() => setDeletingSession(null)}
       />
     </div>
   );

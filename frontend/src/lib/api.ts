@@ -396,6 +396,18 @@ export function getEndSessionUrl(readingId: string, sessionId: string): string {
   return `/api/readings/${readingId}/sessions/${sessionId}/end`;
 }
 
+/**
+ * セッションを削除する（メッセージも含む）
+ */
+export async function deleteSession(
+  readingId: string,
+  sessionId: string
+): Promise<void> {
+  await apiClient(`/api/readings/${readingId}/sessions/${sessionId}`, {
+    method: "DELETE",
+  });
+}
+
 // --- ニックネームAPI ---
 
 /**
